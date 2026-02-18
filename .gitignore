@@ -1,2 +1,11 @@
+# Virtual environments
 myEnv/
+venv/
+env/
+
+# Python Bytecode
+__pycache__/
+*.py[cod]
+
+# Local Todo
 TODO.md
