@@ -26,6 +26,10 @@ class AtlasMap:
         "obj",    # C#
         "vendor"  # PHP/Go
     }
+    
+    # Maximum number of files to display per directory
+    # If there are more files, show "N more files..." instead
+    MAX_FILES_PER_DIR = 10
 
     # The constructor gets called on the root folder of interest
     def __init__(self, root_dir):
@@ -68,6 +72,10 @@ class AtlasMap:
             tree_node.add("[red]🚫 Access Denied[/]")
             return
         
+        # Separate directories and files for the heuristic
+        directories = []
+        files = []
+        
         for path in paths:
             # Filter: skip hidden files or folders
             if path.name.startswith("."):
@@ -76,25 +84,41 @@ class AtlasMap:
             if path.name in self.IGNORE_FOLDERS: 
                 continue
 
-
-            # Handle directories (recursion)
             if path.is_dir():
-                # Create a new branch for this folder
-                # escape() here escapes the folder name to delete possible rich tags
-                branch = tree_node.add(f"[bold green]📁 {escape(path.name)}[/]")
-                # Recursion, dive into the folder
-                self._walk(path, branch)
-            
-            # Handle files
+                directories.append(path)
             else:
-                # Calculate size for display
-                file_size = decimal(path.stat().st_size)
-                # Add simple icons based on extension
-                icon = "🐍" if path.suffix == ".py" else "📄"
-                # Add the leaf node
-                tree_node.add(
-                    f"{icon} {escape(path.name)} ([dim]{file_size}[/])"
-                )
+                files.append(path)
+
+        # Always show all directories (no limit)
+        for path in directories:
+            # Create a new branch for this folder
+            # escape() here escapes the folder name to delete possible rich tags
+            branch = tree_node.add(f"[bold green]📁 {escape(path.name)}[/]")
+            # Recursion, dive into the folder
+            self._walk(path, branch)
+        
+        # Limit the number of files shown
+        files_shown = 0
+        for path in files:
+            if files_shown >= self.MAX_FILES_PER_DIR:
+                break
+            
+            # Calculate size for display
+            file_size = decimal(path.stat().st_size)
+            # Add simple icons based on extension
+            icon = "🐍" if path.suffix == ".py" else "📄"
+            # Add the leaf node
+            tree_node.add(
+                f"{icon} {escape(path.name)} ([dim]{file_size}[/])"
+            )
+            files_shown += 1
+        
+        # If there are more files than shown, add a summary message
+        remaining_files = len(files) - files_shown
+        if remaining_files > 0:
+            tree_node.add(
+                f"[dim italic]... {remaining_files} more file{'s' if remaining_files > 1 else ''}[/]"
+            )
 
 # [REMOVE LATER] Just use this as temporary quick tests
 if __name__ == "__main__":
@@ -103,4 +127,3 @@ if __name__ == "__main__":
     map = AtlasMap(root_folder)
     tree = map.generate()
     console.print(tree)
-

@@ -115,6 +115,70 @@ class TestAtlasMap(unittest.TestCase):
         expected_folders = {"__pycache__", "node_modules", "venv", ".git"}
         self.assertTrue(expected_folders.issubset(AtlasMap.IGNORE_FOLDERS))
 
+    def test_max_files_limit(self):
+        """Test that files are limited to MAX_FILES_PER_DIR"""
+        # Create more files than the limit
+        num_files = 15
+        for i in range(num_files):
+            test_file = os.path.join(self.test_dir, f"file{i}.txt")
+            Path(test_file).touch()
+
+        atlas_map = AtlasMap(self.test_dir)
+        tree = atlas_map.generate()
+        
+        # Should have MAX_FILES_PER_DIR files + 1 "more files" message
+        # Total children = 10 files + 1 message = 11
+        self.assertEqual(len(tree.children), atlas_map.MAX_FILES_PER_DIR + 1)
+
+    def test_files_under_limit(self):
+        """Test that all files are shown when under the limit"""
+        # Create fewer files than the limit
+        num_files = 5
+        for i in range(num_files):
+            test_file = os.path.join(self.test_dir, f"file{i}.txt")
+            Path(test_file).touch()
+
+        atlas_map = AtlasMap(self.test_dir)
+        tree = atlas_map.generate()
+        
+        # Should have exactly num_files children (no "more files" message)
+        self.assertEqual(len(tree.children), num_files)
+
+    def test_directories_not_limited(self):
+        """Test that subdirectories are always shown, not limited"""
+        # Create many subdirectories (more than MAX_FILES_PER_DIR)
+        num_dirs = 15
+        for i in range(num_dirs):
+            subdir = os.path.join(self.test_dir, f"subdir{i}")
+            os.makedirs(subdir)
+
+        atlas_map = AtlasMap(self.test_dir)
+        tree = atlas_map.generate()
+        
+        # All directories should be shown (no limit on directories)
+        self.assertEqual(len(tree.children), num_dirs)
+
+    def test_mixed_files_and_directories(self):
+        """Test that directories are shown and files are limited separately"""
+        # Create 5 directories and 15 files
+        num_dirs = 5
+        num_files = 15
+        
+        for i in range(num_dirs):
+            subdir = os.path.join(self.test_dir, f"subdir{i}")
+            os.makedirs(subdir)
+        
+        for i in range(num_files):
+            test_file = os.path.join(self.test_dir, f"file{i}.txt")
+            Path(test_file).touch()
+
+        atlas_map = AtlasMap(self.test_dir)
+        tree = atlas_map.generate()
+        
+        # Should have 5 dirs + 10 files (limit) + 1 "more files" message = 16
+        expected_children = num_dirs + atlas_map.MAX_FILES_PER_DIR + 1
+        self.assertEqual(len(tree.children), expected_children)
+
 
 
 class TestAtlasMapPermissions(unittest.TestCase):
