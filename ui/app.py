@@ -2,54 +2,58 @@
 
 from textual.app import App, ComposeResult
 from textual.widgets import Header, Footer, Static
-from textual.containers import ScrollableContainer
+from textual.containers import ScrollableContainer, VerticalScroll
+from pathlib import Path
 
 from core.map import AtlasMap
 
 class AtlasApp(App):
-    # CSS like syntax for styling
-    CSS = """
-    Screen {
-        layout: vertical;
-    }
-    #tree-container {
-        width: 100%;
-        height: 1fr; /* Takes up the remaining space */
-        padding: 1 2; /* 1 row top / bottom, 2 cols left/right */
-    }    
     """
+    The Textual UI for atlas
+    """
+    def __init__(self, root_dir):
+        # Let's call the textual.App constructor first (necessary)
+        super().__init__()
+        self.root_dir = root_dir
+
+    # Textual uses CSS for the UI
+    CSS_PATH = "style.tcss"
 
     # Bindings: allow user to press keys to do things
     BINDINGS = [
-        ("q", "quit", "Quit Atlas")
+        ("q", "quit", "Quit Atlas"),
+        ("d", "toggle_dark", "Toggle Dark Mode")
     ]
 
     def compose(self) -> ComposeResult:
         """
-        This method defines the layout of the App.
+        Create child widgets for the APP
         """
-        # TODO: Yield a header
-        # TODO: Yield a Scrollable container
-        # Inside the container, yield a Static() widget with
-        # id="map-view". The static widget is where we inject
-        # the Rich tree later
+        yield Header()
+        yield VerticalScroll(Static(id="map-view"))
+        yield Footer() 
 
-        # TODO: yield a Footer()
-    
+
     def on_mount(self) -> None:
         """
         This method runs exactly once, right after the app is
         built and rendered. This is where data is fetched and
         the UI updated
         """
-        # TODO: Instantiate AtlasMap pointing to "." (or any dir)
-        # TODO: Call generate() to get the rich tree object
-        # TODO: Query the UI for your map-view widget and update it with the tree
-        # hint: self.query_one("#map-view", Static).update(your_tree)
+        atlas_map = AtlasMap(self.root_dir)
+        tree = atlas_map.generate()
+        self.query_one("#map-view", Static).update(tree)
         pass
 
+    def action_toggle_dark(self) -> None:
+        self.theme = (
+            "textual-dark" if self.theme == "textual-light" else "textual-light"
+        )
+
+    def action_quit(self) -> None:
+        pass
 
 # [REMOVE LATER] For testing the UI directly
 if __name__ == "__main__":
-    app = AtlasApp()
+    app = AtlasApp(".")
     app.run()
