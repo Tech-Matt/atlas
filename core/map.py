@@ -52,6 +52,7 @@ class AtlasMap:
 
         return tree
 
+    # The walk is based on a DFS Search (Depth first search)
     def _walk(self, directory, tree_node):
         """
         It looks at 'directory' and adds items to 'tree_node'.
