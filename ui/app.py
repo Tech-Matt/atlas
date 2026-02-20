@@ -11,10 +11,11 @@ class AtlasApp(App):
     """
     The Textual UI for atlas
     """
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, max_depth):
         # Let's call the textual.App constructor first (necessary)
         super().__init__()
         self.root_dir = root_dir
+        self.max_depth = max_depth # Maximum depth of subfolders
 
     # Textual uses CSS for the UI
     CSS_PATH = "style.tcss"
@@ -22,7 +23,9 @@ class AtlasApp(App):
     # Bindings: allow user to press keys to do things
     BINDINGS = [
         ("q", "quit", "Quit Atlas"),
-        ("d", "toggle_dark", "Toggle Dark Mode")
+        ("d", "toggle_dark", "Toggle Dark Mode"),
+        ("j", "scroll_down", "Scroll Down"),
+        ("k", "scroll_up", "Scroll Up")
     ]
 
     def compose(self) -> ComposeResult:
@@ -30,7 +33,7 @@ class AtlasApp(App):
         Create child widgets for the APP
         """
         yield Header()
-        yield VerticalScroll(Static(id="map-view"))
+        yield VerticalScroll(Static(id="map-view"), id="main-scroll")
         yield Footer() 
 
 
@@ -40,7 +43,7 @@ class AtlasApp(App):
         built and rendered. This is where data is fetched and
         the UI updated
         """
-        atlas_map = AtlasMap(self.root_dir)
+        atlas_map = AtlasMap(self.root_dir, self.max_depth)
         tree = atlas_map.generate()
         self.query_one("#map-view", Static).update(tree)
         pass
@@ -49,11 +52,19 @@ class AtlasApp(App):
         self.theme = (
             "textual-dark" if self.theme == "textual-light" else "textual-light"
         )
+    
+    def action_scroll_down(self) -> None:
+        scroll_view = self.query_one("#main-scroll", VerticalScroll)
+        scroll_view.scroll_down()
+
+    def action_scroll_up(self) -> None:
+        scroll_view = self.query_one("#main-scroll", VerticalScroll)
+        scroll_view.scroll_up()
 
     def action_quit(self) -> None:
-        pass
+        self.exit()
 
 # [REMOVE LATER] For testing the UI directly
 if __name__ == "__main__":
-    app = AtlasApp(".")
+    app = AtlasApp(Path("~/LinuxSource/linux/").expanduser(), 3)
     app.run()

@@ -1,4 +1,4 @@
 textual
 rich
 networkx
-google-generativeai
+psutil

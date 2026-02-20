@@ -32,8 +32,9 @@ class AtlasMap:
     MAX_FILES_PER_DIR = 10
 
     # The constructor gets called on the root folder of interest
-    def __init__(self, root_dir):
+    def __init__(self, root_dir, max_depth):
         self.root_dir = root_dir
+        self.max_depth = max_depth
 
     def generate(self):
         """
@@ -48,12 +49,12 @@ class AtlasMap:
         tree = Tree(f"📂 [bold blue]{root_name}[/]")
 
         # Start walking in a recursive fashion
-        self._walk(self.root_dir, tree)
+        self._walk(self.root_dir, tree, current_depth=0)
 
         return tree
 
     # The walk is based on a DFS Search (Depth first search)
-    def _walk(self, directory, tree_node):
+    def _walk(self, directory, tree_node, current_depth):
         """
         It looks at 'directory' and adds items to 'tree_node'.
         It calls itself if it finds a subfolder
@@ -95,8 +96,10 @@ class AtlasMap:
             # Create a new branch for this folder
             # escape() here escapes the folder name to delete possible rich tags
             branch = tree_node.add(f"[bold green]📁 {escape(path.name)}[/]")
-            # Recursion, dive into the folder
-            self._walk(path, branch)
+
+            # Recursion, dive into the folder only if we haven't hit the depth limit
+            if current_depth < self.max_depth - 1:
+                self._walk(path, branch, current_depth + 1)
         
         # Limit the number of files shown
         files_shown = 0
@@ -125,6 +128,6 @@ class AtlasMap:
 if __name__ == "__main__":
     # Debug testing with console.print()
     root_folder = Path("~/LinuxSource/.").expanduser()
-    map = AtlasMap(root_folder)
+    map = AtlasMap(root_folder, 3)
     tree = map.generate()
     console.print(tree)
