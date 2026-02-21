@@ -21,8 +21,8 @@ Diving into a massive codebase like the Linux Kernel or a legacy enterprise app 
 ### Free, Open, Local Intelligence
 You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just to understand a codebase. Atlas dynamically profiles your PC's hardware (Apple Silicon, NVIDIA, AMD, or CPU-only) and automatically downloads and runs **architecture-optimized local LLMs**. You get instant, private folder summaries running entirely on your own machine—for free. *(Cloud APIs are still supported if you prefer them).*
 
-- **Zero-Friction:** Just `pip install atlas` and run `atlas`. No Docker, no manual model downloading.
-- **Fast & Native:** A blazing-fast TUI built with `Textual` and `Rich`. Uses ~1% CPU when idle.
+- **Zero-Friction:** Just do `pip install atlas` and run `atlas`. No Docker, no manual model downloading.
+- **Fast & Native:** A fast TUI built with `Textual` and `Rich`.
 - **Private by Default:** Your proprietary code never leaves your machine unless you explicitly configure a cloud provider.
 
 ---
