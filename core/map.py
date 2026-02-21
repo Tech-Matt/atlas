@@ -46,7 +46,7 @@ class AtlasMap:
         root_name = Path(self.root_dir).resolve().name
 
         # Create the visual Root Node
-        tree = Tree(f"📂 [bold blue]{root_name}[/]")
+        tree = Tree(f"[bold blue]{root_name}[/]")
 
         # Start walking in a recursive fashion
         self._walk(self.root_dir, tree, current_depth=0)
@@ -71,7 +71,7 @@ class AtlasMap:
 
         except PermissionError:
             # Handle folders we can't open
-            tree_node.add("[red]🚫 Access Denied[/]")
+            tree_node.add("[red]Access Denied[/]")
             return
         
         # Separate directories and files for the heuristic
@@ -95,7 +95,7 @@ class AtlasMap:
         for path in directories:
             # Create a new branch for this folder
             # escape() here escapes the folder name to delete possible rich tags
-            branch = tree_node.add(f"[bold green]📁 {escape(path.name)}[/]")
+            branch = tree_node.add(f"[bold green]{escape(path.name)}[/]")
 
             # Recursion, dive into the folder only if we haven't hit the depth limit
             if current_depth < self.max_depth - 1:
