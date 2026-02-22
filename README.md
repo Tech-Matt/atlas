@@ -1,6 +1,6 @@
 <div align="center">
 
-# ATLAS
+# ATLAS 🗺️
 
 **The free, 100% private, local-LLM codebase cartographer for your terminal.**
 
@@ -15,13 +15,12 @@
 ---
 
 ## Why Atlas?
-
-Diving into a massive codebase like the Linux Kernel or a legacy enterprise app can be overwhelming. **Atlas** provides instant visual overviews and directory trees right in your terminal, helping you map out the structure before you deep dive into the code.
+I wanted a tool to explore new and large codebases (like the *Linux Kernel* source code 😄), with an intuitive and powerful UI. **Atlas** provides instant visual overviews and directory trees right in your terminal, helping you map out the structure before you deep dive into the code.
 
 ### Free, Open, Local Intelligence
-You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just to understand a codebase. Atlas dynamically profiles your PC's hardware (Apple Silicon, NVIDIA, AMD, or CPU-only) and automatically downloads and runs **architecture-optimized local LLMs**. You get instant, private folder summaries running entirely on your own machine—for free. *(Cloud APIs are still supported if you prefer them).*
+You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just to understand a codebase. **Atlas dynamically profiles** your PC's hardware (Apple Silicon, NVIDIA, AMD GPU, or CPU-only) and automatically downloads and runs **architecture-optimized local LLMs**. You get instant and private folder summaries running entirely on your own machine—for free. *(Cloud APIs are still supported if you prefer them).*
 
-- **Zero-Friction:** Just do `pip install atlas` and run `atlas`. No Docker, no manual model downloading.
+- **Zero-Friction:** Just do `pip install atlas` and run `atlas`. No Docker, no manual model downloading. (Still to be packaged as of now)
 - **Fast & Native:** A fast TUI built with `Textual` and `Rich`.
 - **Private by Default:** Your proprietary code never leaves your machine unless you explicitly configure a cloud provider.
 
@@ -62,7 +61,7 @@ atlas
 ## Roadmap
 
 - [x] **Phase 1: Visual Engine** (Recursive parsing, smart filtering, TUI scaffolding)
-- [ ] **Phase 2: Hardware Profiling** (Native GPU/RAM detection, model mapping)
+- [x] **Phase 2: Hardware Profiling** (Native GPU/RAM detection, model mapping)
 - [ ] **Phase 3: Local Summaries** (Local inference engine, TUI integration)
 - [ ] **Phase 4: Testing & Hardening** (Unit tests, CI/CD pipeline)
 - [ ] **Phase 5: Packaging** (PyPI release, zero-dependency binaries)
