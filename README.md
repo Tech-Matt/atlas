@@ -24,6 +24,12 @@ You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just 
 - **Fast & Native:** A fast TUI built with `Textual` and `Rich`.
 - **Private by Default:** Your proprietary code never leaves your machine unless you explicitly configure a cloud provider.
 
+### Current Platform Support
+- **macOS (Apple Silicon / arm64):** Supported
+- **macOS (Intel / x86_64):** Not supported yet
+- **Linux:** Supported
+- **Windows:** Supported
+
 ---
 
 ## Installation

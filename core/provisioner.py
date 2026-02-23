@@ -21,19 +21,20 @@ class Provisioner:
 
     # The Binary Matrix (llama.cpp server releases)
     # URLS will need to be updated to the latest release tag
+    # TODO: Port later to manifest.json
     BINARIES = {
         "Windows": {
-            "CUDA": "llama-bxxxx-bin-win-cuda-cu12.2-x64.zip",
-            "Vulkan": "llama-bxxxx-bin-win-vulkan-x64.zip",
-            "CPU": "llama-bxxxx-bin-win-avx2-x64.zip"
+            "CUDA": "https://github.com/ggml-org/llama.cpp/releases/download/b8133/llama-b8133-bin-win-cuda-13.1-x64.zip",
+            "Vulkan": "https://github.com/ggml-org/llama.cpp/releases/download/b8133/llama-b8133-bin-win-vulkan-x64.zip",
+            "CPU": "https://github.com/ggml-org/llama.cpp/releases/download/b8133/llama-b8133-bin-win-cpu-x64.zip"
         },
         "Linux": {
-            "CUDA": "llama-bxxxx-bin-ubuntu-x64.zip",
-            "Vulkan": "llama-bxxxx-bin-ubuntu-vulkan-x64.zip",
-            "CPU": "llama-bxxxx-bin-ubuntu-x64.zip"
+            "CUDA": "https://github.com/ggml-org/llama.cpp/releases/download/b8133/llama-b8133-bin-ubuntu-x64.tar.gz",
+            "Vulkan": "https://github.com/ggml-org/llama.cpp/releases/download/b8133/llama-b8133-bin-ubuntu-vulkan-x64.tar.gz",
+            "CPU": "https://github.com/ggml-org/llama.cpp/releases/download/b8133/llama-b8133-bin-ubuntu-x64.tar.gz"
         },
         "Darwin": {
-            "APPLE_SILICON": "llama-bxxxx-bin-macos-arm64.zip"
+            "APPLE_SILICON": "https://github.com/ggml-org/llama.cpp/releases/download/b8133/llama-b8133-bin-macos-arm64.tar.gz"
         }
     }
 
@@ -42,8 +43,10 @@ class Provisioner:
         self.atlas_dir = Path.home() / ".atlas"
         self.models_dir = self.atlas_dir / "models"
         self.bin_dir = self.atlas_dir / "bin"
-
-        # TODO: Ensure these dirs exists using mkdir(parents=True, exist_ok=True)
+        # Handle directories already existing
+        self.atlas_dir.mkdir(parents=True, exist_ok=True)
+        self.models_dir.mkdir(parents=True, exist_ok=True)
+        self.bin_dir.mkdir(parents=True, exist_ok=True)
 
     def determine_tier(self, ram_gb: float, gpu_type: str, vram_gb: float) -> int:
         """
@@ -53,16 +56,37 @@ class Provisioner:
         Tier 3: Low-End (8GB RAM CPU)
         Tier 4: Potato PC (<8GB RAM CPU)
         """
-        # TODO: Implement If logic to return tier
-        pass
+        gpu = (gpu_type or "").upper()
+
+        # Apple Silicon
+        if gpu == "APPLE_SILICON":
+            if ram_gb >= 16:
+                return 1
+            if ram_gb >= 8:
+                return 3
+            return 4
+        
+        # Discrete GPU
+        if vram_gb >= 8:
+            return 1
+        if vram_gb >= 4:
+            return 2
+        
+        # CPU only
+        if ram_gb >= 16:
+            return 2
+        if ram_gb >= 8:
+            return 3
+        
+        # Default case - Tier 4
+        return 4
     
     def get_binary_preference(self, os_name: str, gpu_type: str, user_choice: str = "auto") -> str:
         """
-        Determines whcih llama.cpp to download
+        Determines which llama.cpp to download
         user_choice can be 'CUDA', 'Vulkan', 'CPU' or 'auto'.
         """
         # TODO: Map the OS and GPU type to the correct key in self.BINARIES
-        pass
 
     def download_file():
         pass
