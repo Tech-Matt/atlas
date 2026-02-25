@@ -7,3 +7,6 @@ env/
 __pycache__/
 *.py[cod]
 
+# Extra
+dist/
+locus_cli.egg-info/

@@ -4,9 +4,8 @@
 
 **The free, 100% private, local-LLM codebase cartographer for your terminal.**
 
-[![Python 3.x](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status: Work in Progress](https://img.shields.io/badge/Status-WIP-orange.svg)]()
+[![PyPI version](https://img.shields.io/pypi/v/locus-cli.svg)](https://pypi.org/project/locus-cli/)
 
 *Stop paying for expensive API keys just to understand a codebase. Locus is a lightweight terminal tool that automatically downloads and runs architecture-optimized local LLMs to instantly map and summarize large codebases—for free, and 100% privately.*
 

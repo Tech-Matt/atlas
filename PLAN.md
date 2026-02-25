@@ -2,6 +2,10 @@
 
 This document defines the next implementation steps for **Locus** as an incremental terminal app, packaged as `locus-cli` on PyPI.
 
+## Agent Directives
+Developer wants to actually learn things and not just copy-paste. Unless otherwise specified, always provide skeletons or snippets of code rather than full implementations. This is really important. 
+Provide also clear explanations to why you are doing things and about what kind of thing you are suggesting.
+
 ## 1) Product Direction (Scope Guardrails)
 
 - Keep Locus lightweight and fast (low RAM/CPU overhead, minimal dependencies).
@@ -11,20 +15,31 @@ This document defines the next implementation steps for **Locus** as an incremen
 
 ## 2) Current State Snapshot
 
+_Status updated from repository state on 2026-02-25._
+
 ### Implemented
 - Recursive tree mapping with filtering and file caps (`core/map.py`).
 - Hardware profiling for RAM + basic accelerator detection (`core/profiler.py`).
 - Basic model/binary provisioning matrix started (`core/provisioner.py`).
-- Initial Textual app shell + keybindings (`ui/app.py`).
-- Base dependencies listed (`requirements.txt`).
+- Initial Textual app shell + keybindings + stylesheet wiring (`ui/app.py`, `ui/style.tcss`).
+- Packaging metadata exists in `pyproject.toml`:
+  - project name `locus-cli`
+  - alpha version `0.1.0a1`
+  - console script entrypoint set to `locus = locus_cli.main:main`
+  - package discovery configured for `src/`
+- Dependencies declared in both `requirements.txt` and `pyproject.toml`.
 
 ### Missing / Incomplete
 - CLI entrypoint and subcommand architecture (`main.py` is empty).
+- Functional `locus` command behavior (entrypoint points to `main`, but no implementation yet).
 - Inference runtime integration (llama.cpp process management, prompt pipeline, parsing).
 - Cloud provider integrations (OpenAI / Claude / Gemini adapters).
 - Repository analysis pipeline for summaries + relationship graphing.
 - TUI views beyond a single static map panel.
-- Tests, packaging metadata, and release automation.
+- Scanner/analyzer/cache modules from target architecture.
+- Automated tests are not yet implemented (`tests/test_map.py` is empty).
+- Packaging validation and publish workflow are implemented (`.github/workflows/publish.yml`, `dist/` artifacts present).
+- README usage/docs are not yet aligned with the current package entrypoint and command state.
 
 ## 3) Target Architecture (Incremental)
 
@@ -48,6 +63,24 @@ This document defines the next implementation steps for **Locus** as an incremen
 - `ui/widgets/`: reusable widgets (loading/status/errors/summary cards).
 
 ## 4) Phased Implementation Steps
+
+### Phase Progress Snapshot (as of 2026-02-25)
+- **Phase 0 — Project Foundation:** **Partial**
+  - Done: model/bin directory foundations in `Provisioner` (`~/.locus` paths).
+  - Missing: config loader, precedence rules, logging strategy, standardized errors.
+- **Phase 1 — CLI Skeleton + First Useful Commands:** **Not started**
+  - `main.py` is still empty, no `tree` / `overview` CLI commands yet.
+- **Phase 2 — Fast Codebase Intelligence Pipeline:** **Not started**
+  - Planned modules (`scanner`, `analyzer`, `cache`) not present.
+- **Phase 3 — Inference Backends (Local First):** **Started (early)**
+  - Done: initial model/binary mapping tables and hardware tier logic.
+  - Missing: binary preference implementation, download/integrity/extraction flow, runtime orchestration.
+- **Phase 4 — Textual TUI Expansion:** **Started (early)**
+  - Done: single-view app shell, keybindings, basic tree rendering.
+  - Missing: multi-view architecture, background workers, loading/error states.
+- **Phase 5 — UX + Performance Hardening:** **Not started**
+- **Phase 6 — Quality and Testing:** **Not started**
+- **Phase 7 — Documentation:** **Partial** (README exists, but command-level docs need realignment)
 
 ## Phase 0 — Project Foundation
 - Define config locations (`~/.locus/config.toml`, cache, model, binary dirs).
@@ -171,19 +204,19 @@ This document defines the next implementation steps for **Locus** as an incremen
 Goal: publish a minimal but valid package quickly to reserve `locus-cli`, while clearly marking pre-release status.
 
 ### Immediate tasks
-- Add packaging metadata (`pyproject.toml`) with:
+- ✅ Add packaging metadata (`pyproject.toml`) with:
   - project name `locus-cli`
   - version `0.1.0a1` (or similar alpha pre-release)
   - description, license, readme, dependencies
-  - console script entrypoint: `locus = main:main` (or final CLI module)
-- Implement a minimal `main.py` entrypoint that:
+  - console script entrypoint: `locus = locus_cli.main:main`
+- ⏳ Implement a minimal `main.py` entrypoint that:
   - prints version/help
   - exposes at least one working command (`tree`) or “WIP” notice for unimplemented commands
-- Include essential files in distribution (`README.md`, `LICENSE`).
-- Build and validate package:
+- ✅ Include essential files in distribution (`README.md`, `LICENSE`).
+- ✅ Build and validate package:
   - `python -m build`
   - `twine check dist/*`
-- Publish with trusted workflow or API token to PyPI.
+- ✅ Publish with trusted workflow or API token to PyPI.
 
 ### Release safety notes
 - Use alpha/dev version suffix until core features are stable.
@@ -191,12 +224,13 @@ Goal: publish a minimal but valid package quickly to reserve `locus-cli`, while 
 - Avoid shipping broken commands silently; return explicit “not implemented yet”.
 
 ### Post-reservation follow-up
-- Set up TestPyPI pipeline + release workflow.
+- ✅ Set up release workflow (`.github/workflows/publish.yml`).
+- Add TestPyPI pipeline (optional preflight channel before production PyPI).
 - Add semantic versioning strategy and changelog process.
 
 ## 8) Suggested Near-Term Execution Order (Next 2–3 Weeks)
 
-1. Package skeleton + reserve `locus-cli` on PyPI.
+1. ✅ Package skeleton + reserve `locus-cli` on PyPI.
 2. Implement robust CLI skeleton + `locus tree` + `locus overview`.
 3. Build scanner/analyzer cache pipeline.
 4. Complete local llama.cpp provisioning + inference summary flow.
@@ -210,3 +244,4 @@ Goal: publish a minimal but valid package quickly to reserve `locus-cli`, while 
 - Optional summary generation works with at least one provider (local preferred).
 - Basic TUI available and responsive for navigation.
 - Core tests and CI in place for critical paths.
+
