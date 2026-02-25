@@ -1,6 +1,6 @@
 <div align="center">
 
-# ATLAS 🗺️
+# LOCUS 🗺️
 
 **The free, 100% private, local-LLM codebase cartographer for your terminal.**
 
@@ -8,19 +8,19 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status: Work in Progress](https://img.shields.io/badge/Status-WIP-orange.svg)]()
 
-*Stop paying for expensive API keys just to understand a codebase. Atlas is a lightweight terminal tool that automatically downloads and runs architecture-optimized local LLMs to instantly map and summarize large codebases—for free, and 100% privately.*
+*Stop paying for expensive API keys just to understand a codebase. Locus is a lightweight terminal tool that automatically downloads and runs architecture-optimized local LLMs to instantly map and summarize large codebases—for free, and 100% privately.*
 
 </div>
 
 ---
 
-## Why Atlas?
-I wanted a tool to explore new and large codebases (like the *Linux Kernel* source code 😄), with an intuitive and powerful UI. **Atlas** provides instant visual overviews and directory trees right in your terminal, helping you map out the structure before you deep dive into the code.
+## Why Locus?
+I wanted a tool to explore new and large codebases (like the *Linux Kernel* source code 😄), with an intuitive and powerful UI. **Locus** provides instant visual overviews and directory trees right in your terminal, helping you map out the structure before you deep dive into the code.
 
 ### Free, Open, Local Intelligence
-You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just to understand a codebase. **Atlas dynamically profiles** your PC's hardware (Apple Silicon, NVIDIA, AMD GPU, or CPU-only) and automatically downloads and runs **architecture-optimized local LLMs**. You get instant and private folder summaries running entirely on your own machine—for free. *(Cloud APIs are still supported if you prefer them).*
+You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just to understand a codebase. **Locus dynamically profiles** your PC's hardware (Apple Silicon, NVIDIA, AMD GPU, or CPU-only) and automatically downloads and runs **architecture-optimized local LLMs**. You get instant and private folder summaries running entirely on your own machine—for free. *(Cloud APIs are still supported if you prefer them).*
 
-- **Zero-Friction:** Just do `pip install name-to-be-decided` and run `atlas`. No Docker, no manual model downloading. (Still to be packaged as of now)
+- **Zero-Friction:** Just do `pip install locus-cli` and run `locus`. No Docker, no manual model downloading. (Still to be packaged as of now)
 - **Fast & Native:** A fast TUI built with `Textual` and `Rich`.
 - **Private by Default:** Your proprietary code never leaves your machine unless you explicitly configure a cloud provider.
 
@@ -34,11 +34,11 @@ You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just 
 
 ## Installation
 
-*Note: Atlas is currently in active development. A v0.1 release is coming soon!*
+*Note: Locus is currently in active development. A v0.1 release is coming soon!*
 
 ```bash
-git clone https://github.com/Tech-Matt/atlas.git
-cd atlas
+git clone https://github.com/Tech-Matt/locus.git
+cd locus
 python -m venv myEnv
 source myEnv/bin/activate  # Windows: `myEnv\Scripts\activate`
 pip install -r requirements.txt
@@ -49,17 +49,17 @@ python main.py
 
 ## Usage
 
-Run `atlas` in any directory you want to explore:
+Run `locus` in any directory you want to explore:
 
 ```bash
 cd /path/to/massive/codebase
-atlas
+locus
 ```
 
 **Keybindings:**
 - `j` / `k` : Scroll Down / Up
 - `d` : Toggle Dark/Light Mode
-- `q` : Quit Atlas
+- `q` : Quit Locus
 - `A` : (Coming Soon) Generate a quick summary for the selected folder
 
 ---
