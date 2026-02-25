@@ -39,12 +39,12 @@ class Provisioner:
     }
 
     def __init__(self):
-        # Define where Atlas will store its data
-        self.atlas_dir = Path.home() / ".atlas"
-        self.models_dir = self.atlas_dir / "models"
-        self.bin_dir = self.atlas_dir / "bin"
+        # Define where Locus will store its data
+        self.locus_dir = Path.home() / ".locus"
+        self.models_dir = self.locus_dir / "models"
+        self.bin_dir = self.locus_dir / "bin"
         # Handle directories already existing
-        self.atlas_dir.mkdir(parents=True, exist_ok=True)
+        self.locus_dir.mkdir(parents=True, exist_ok=True)
         self.models_dir.mkdir(parents=True, exist_ok=True)
         self.bin_dir.mkdir(parents=True, exist_ok=True)
 

@@ -1,0 +1,106 @@
+Metadata-Version: 2.4
+Name: locus-cli
+Version: 0.1.0a1
+Summary: Lightweight terminal app to quickly understand large codebases
+Author: Mattia Rizzo
+License: MIT
+Project-URL: Homepage, https://github.com/Tech-Matt/locus
+Project-URL: Repository, https://github.com/Tech-Matt/locus
+Keywords: cli,tui,llm,codebase,textual,rich
+Classifier: Development Status :: 3 - Alpha
+Classifier: Environment :: Console
+Classifier: Intented Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Software Development :: Documentation
+Classifier: Topic :: Utilities
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: textual>=0.70.0
+Requires-Dist: rich>=13.0.0
+Dynamic: license-file
+
+<div align="center">
+
+# LOCUS 🗺️
+
+**The free, 100% private, local-LLM codebase cartographer for your terminal.**
+
+[![Python 3.x](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Status: Work in Progress](https://img.shields.io/badge/Status-WIP-orange.svg)]()
+
+*Stop paying for expensive API keys just to understand a codebase. Locus is a lightweight terminal tool that automatically downloads and runs architecture-optimized local LLMs to instantly map and summarize large codebases—for free, and 100% privately.*
+
+</div>
+
+---
+
+## Why Locus?
+I wanted a tool to explore new and large codebases (like the *Linux Kernel* source code 😄), with an intuitive and powerful UI. **Locus** provides instant visual overviews and directory trees right in your terminal, helping you map out the structure before you deep dive into the code.
+
+### Free, Open, Local Intelligence
+You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just to understand a codebase. **Locus dynamically profiles** your PC's hardware (Apple Silicon, NVIDIA, AMD GPU, or CPU-only) and automatically downloads and runs **architecture-optimized local LLMs**. You get instant and private folder summaries running entirely on your own machine—for free. *(Cloud APIs are still supported if you prefer them).*
+
+- **Zero-Friction:** Just do `pip install locus-cli` and run `locus`. No Docker, no manual model downloading. (Still to be packaged as of now)
+- **Fast & Native:** A fast TUI built with `Textual` and `Rich`.
+- **Private by Default:** Your proprietary code never leaves your machine unless you explicitly configure a cloud provider.
+
+### Current Platform Support
+- **macOS (Apple Silicon / arm64):** Supported
+- **macOS (Intel / x86_64):** Not supported yet
+- **Linux:** Supported
+- **Windows:** Supported
+
+---
+
+## Installation
+
+*Note: Locus is currently in active development. A v0.1 release is coming soon!*
+
+```bash
+git clone https://github.com/Tech-Matt/locus.git
+cd locus
+python -m venv myEnv
+source myEnv/bin/activate  # Windows: `myEnv\Scripts\activate`
+pip install -r requirements.txt
+python main.py
+```
+
+---
+
+## Usage
+
+Run `locus` in any directory you want to explore:
+
+```bash
+cd /path/to/massive/codebase
+locus
+```
+
+**Keybindings:**
+- `j` / `k` : Scroll Down / Up
+- `d` : Toggle Dark/Light Mode
+- `q` : Quit Locus
+- `A` : (Coming Soon) Generate a quick summary for the selected folder
+
+---
+
+## Roadmap
+
+- [x] **Phase 1: Visual Engine** (Recursive parsing, smart filtering, TUI scaffolding)
+- [x] **Phase 2: Hardware Profiling** (Native GPU/RAM detection, model mapping)
+- [ ] **Phase 3: Local Summaries** (Local inference engine, TUI integration)
+- [ ] **Phase 4: Testing & Hardening** (Unit tests, CI/CD pipeline)
+- [ ] **Phase 5: Packaging** (PyPI release, zero-dependency binaries)
+
+---
+
+<div align="center">
+Made with ❤️ by <a href="https://github.com/Tech-Matt">Tech-Matt</a>
+</div>

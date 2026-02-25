@@ -7,8 +7,3 @@ env/
 __pycache__/
 *.py[cod]
 
-# Local Todo
-TODO.md
-
-# Agents
-PLAN.md

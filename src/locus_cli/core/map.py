@@ -9,7 +9,7 @@ from rich.filesize import decimal
 from rich.markup import escape
 from ui.console import console
 
-class AtlasMap:
+class LocusMap:
     # Default list of folders to ignore
     IGNORE_FOLDERS = {
         "__pycache__", 
@@ -128,6 +128,6 @@ class AtlasMap:
 if __name__ == "__main__":
     # Debug testing with console.print()
     root_folder = Path("~/LinuxSource/.").expanduser()
-    map = AtlasMap(root_folder, 3)
+    map = LocusMap(root_folder, 3)
     tree = map.generate()
     console.print(tree)

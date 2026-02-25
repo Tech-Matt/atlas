@@ -5,11 +5,11 @@ from textual.widgets import Header, Footer, Static
 from textual.containers import ScrollableContainer, VerticalScroll
 from pathlib import Path
 
-from core.map import AtlasMap
+from core.map import LocusMap
 
-class AtlasApp(App):
+class LocusApp(App):
     """
-    The Textual UI for atlas
+    The Textual UI for locus
     """
     def __init__(self, root_dir, max_depth):
         # Let's call the textual.App constructor first (necessary)
@@ -22,7 +22,7 @@ class AtlasApp(App):
 
     # Bindings: allow user to press keys to do things
     BINDINGS = [
-        ("q", "quit", "Quit Atlas"),
+        ("q", "quit", "Quit Locus"),
         ("d", "toggle_dark", "Toggle Dark Mode"),
         ("j", "scroll_down", "Scroll Down"),
         ("k", "scroll_up", "Scroll Up")
@@ -43,8 +43,8 @@ class AtlasApp(App):
         built and rendered. This is where data is fetched and
         the UI updated
         """
-        atlas_map = AtlasMap(self.root_dir, self.max_depth)
-        tree = atlas_map.generate()
+        locus_map = LocusMap(self.root_dir, self.max_depth)
+        tree = locus_map.generate()
         self.query_one("#map-view", Static).update(tree)
         pass
 
@@ -66,5 +66,5 @@ class AtlasApp(App):
 
 # [REMOVE LATER] For testing the UI directly
 if __name__ == "__main__":
-    app = AtlasApp(Path("~/LinuxSource/linux/").expanduser(), 3)
+    app = LocusApp(Path("~/LinuxSource/linux/").expanduser(), 3)
     app.run()
