@@ -9,7 +9,6 @@ __pycache__/
 
 # Extra
 dist/
-locus_cli.egg-info/
-
+*.egg-info/
 # Agents
 .github/copilot-instructions.md
