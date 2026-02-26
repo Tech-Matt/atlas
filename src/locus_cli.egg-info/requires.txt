@@ -1,2 +1,7 @@
 textual>=0.70.0
 rich>=13.0.0
+
+[dev]
+pytest>=8.0
+mypy>=1.9
+types-psutil>=6.0

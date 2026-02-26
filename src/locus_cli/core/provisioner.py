@@ -38,7 +38,7 @@ class Provisioner:
         }
     }
 
-    def __init__(self):
+    def __init__(self) -> None:
         # Define where Locus will store its data
         self.locus_dir = Path.home() / ".locus"
         self.models_dir = self.locus_dir / "models"
@@ -81,12 +81,13 @@ class Provisioner:
         # Default case - Tier 4
         return 4
     
-    def get_binary_preference(self, os_name: str, gpu_type: str, user_choice: str = "auto") -> str:
+    def get_binary_preference(self, os_name: str, gpu_type: str, user_choice: str = "auto"):
         """
         Determines which llama.cpp to download
         user_choice can be 'CUDA', 'Vulkan', 'CPU' or 'auto'.
         """
         # TODO: Map the OS and GPU type to the correct key in self.BINARIES
+        pass
 
-    def download_file():
+    def download_file(self):
         pass

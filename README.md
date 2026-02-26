@@ -33,43 +33,47 @@ You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just 
 
 ## Installation
 
-*Note: Locus is currently in active development. A v0.1 release is coming soon!*
+```bash
+pip install locus-cli
+```
+
+Or to run from source:
 
 ```bash
 git clone https://github.com/Tech-Matt/locus.git
 cd locus
-python -m venv myEnv
-source myEnv/bin/activate  # Windows: `myEnv\Scripts\activate`
-pip install -r requirements.txt
-python main.py
+python -m venv .venv
+source .venv/bin/activate  # Windows: `.venv\Scripts\activate`
+pip install -e .
 ```
 
 ---
 
 ## Usage
 
-Run `locus` in any directory you want to explore:
-
 ```bash
-cd /path/to/massive/codebase
-locus
-```
+# Show a tree of the current directory
+locus tree
 
-**Keybindings:**
-- `j` / `k` : Scroll Down / Up
-- `d` : Toggle Dark/Light Mode
-- `q` : Quit Locus
-- `A` : (Coming Soon) Generate a quick summary for the selected folder
+# Show a tree of a specific path, with custom depth and ignore rules
+locus tree /path/to/codebase --depth 3 --ignore build --ignore dist
+
+# Print version
+locus --version
+```
 
 ---
 
 ## Roadmap
 
-- [x] **Phase 1: Visual Engine** (Recursive parsing, smart filtering, TUI scaffolding)
-- [x] **Phase 2: Hardware Profiling** (Native GPU/RAM detection, model mapping)
-- [ ] **Phase 3: Local Summaries** (Local inference engine, TUI integration)
-- [ ] **Phase 4: Testing & Hardening** (Unit tests, CI/CD pipeline)
-- [ ] **Phase 5: Packaging** (PyPI release, zero-dependency binaries)
+- [x] **Recursive tree mapping** with smart filtering and file caps
+- [x] **Hardware profiling** (Apple Silicon, NVIDIA, AMD, CPU-only detection)
+- [x] **`locus tree` CLI command** (depth, max-files, ignore flags)
+- [x] **PyPI packaging** (`pip install locus-cli`)
+- [ ] **`locus overview`** — static codebase stats (file counts, languages, largest folders)
+- [ ] **Progressive rendering** — stream tree output incrementally for large repos
+- [ ] **Local LLM summaries** — auto-download and run architecture-optimized models
+- [ ] **TUI** — full interactive terminal UI
 
 ---
 

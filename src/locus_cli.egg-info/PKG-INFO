@@ -1,6 +1,6 @@
 Metadata-Version: 2.4
 Name: locus-cli
-Version: 0.1.0a1
+Version: 0.1.0a2
 Summary: Lightweight terminal app to quickly understand large codebases
 Author: Mattia Rizzo
 License: MIT
@@ -9,7 +9,7 @@ Project-URL: Repository, https://github.com/Tech-Matt/locus
 Keywords: cli,tui,llm,codebase,textual,rich
 Classifier: Development Status :: 3 - Alpha
 Classifier: Environment :: Console
-Classifier: Intented Audience :: Developers
+Classifier: Intended Audience :: Developers
 Classifier: License :: OSI Approved :: MIT License
 Classifier: Programming Language :: Python :: 3
 Classifier: Programming Language :: Python :: 3 :: Only
@@ -23,6 +23,10 @@ Description-Content-Type: text/markdown
 License-File: LICENSE
 Requires-Dist: textual>=0.70.0
 Requires-Dist: rich>=13.0.0
+Provides-Extra: dev
+Requires-Dist: pytest>=8.0; extra == "dev"
+Requires-Dist: mypy>=1.9; extra == "dev"
+Requires-Dist: types-psutil>=6.0; extra == "dev"
 Dynamic: license-file
 
 <div align="center">
@@ -31,9 +35,8 @@ Dynamic: license-file
 
 **The free, 100% private, local-LLM codebase cartographer for your terminal.**
 
-[![Python 3.x](https://img.shields.io/badge/python-3.x-blue.svg)](https://www.python.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Status: Work in Progress](https://img.shields.io/badge/Status-WIP-orange.svg)]()
+[![PyPI version](https://img.shields.io/pypi/v/locus-cli.svg)](https://pypi.org/project/locus-cli/)
 
 *Stop paying for expensive API keys just to understand a codebase. Locus is a lightweight terminal tool that automatically downloads and runs architecture-optimized local LLMs to instantly map and summarize large codebases—for free, and 100% privately.*
 

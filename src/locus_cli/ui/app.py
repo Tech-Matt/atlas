@@ -5,13 +5,13 @@ from textual.widgets import Header, Footer, Static
 from textual.containers import ScrollableContainer, VerticalScroll
 from pathlib import Path
 
-from core.map import LocusMap
+from ..core.map import LocusMap
 
 class LocusApp(App):
     """
     The Textual UI for locus
     """
-    def __init__(self, root_dir, max_depth):
+    def __init__(self, root_dir, max_depth) -> None:
         # Let's call the textual.App constructor first (necessary)
         super().__init__()
         self.root_dir = root_dir
@@ -61,7 +61,7 @@ class LocusApp(App):
         scroll_view = self.query_one("#main-scroll", VerticalScroll)
         scroll_view.scroll_up()
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         self.exit()
 
 # [REMOVE LATER] For testing the UI directly

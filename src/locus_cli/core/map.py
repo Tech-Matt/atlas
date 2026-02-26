@@ -1,16 +1,17 @@
 # This files needs to take a folder address like 'src' or '.' and return a Tree
 # object which the UI can then render
 
-import os
+# Global imports
 from pathlib import Path
 from rich.tree import Tree
-from rich.text import Text
 from rich.filesize import decimal
 from rich.markup import escape
-from ui.console import console
+
+# Local imports
+from ..ui.console import console
 
 class LocusMap:
-    # Default list of folders to ignore
+    # Default list of folders to ignore. (This is a class variable, like a static variable in C)
     IGNORE_FOLDERS = {
         "__pycache__", 
         "node_modules", 
@@ -27,16 +28,23 @@ class LocusMap:
         "vendor"  # PHP/Go
     }
     
-    # Maximum number of files to display per directory
-    # If there are more files, show "N more files..." instead
-    MAX_FILES_PER_DIR = 10
-
-    # The constructor gets called on the root folder of interest
-    def __init__(self, root_dir, max_depth):
+    def __init__(self, root_dir, max_depth, max_files=10, ignore=None) -> None:
+        """
+        root_dir: Root directory of the desired codebase to be inspected
+        max_depth: commands will go inside subfolder max_depth times
+        max_files: max files to show in the UI for every folder
+        ignore: Files or folders to be excluded from the search
+        """
         self.root_dir = root_dir
         self.max_depth = max_depth
+        self.max_files = max_files
+        # Combine user excluded folders to default excluded folders
+        if ignore is not None:
+            self.effective_ignore = self.IGNORE_FOLDERS | set(ignore)
+        else:
+            self.effective_ignore = self.IGNORE_FOLDERS
 
-    def generate(self):
+    def generate(self) -> Tree:
         """
         Starting from the root folder, it creates the tree and then returns it
         """
@@ -54,7 +62,7 @@ class LocusMap:
         return tree
 
     # The walk is based on a DFS Search (Depth first search)
-    def _walk(self, directory, tree_node, current_depth):
+    def _walk(self, directory, tree_node, current_depth) -> None:
         """
         It looks at 'directory' and adds items to 'tree_node'.
         It calls itself if it finds a subfolder
@@ -77,13 +85,13 @@ class LocusMap:
         # Separate directories and files for the heuristic
         directories = []
         files = []
-        
+
         for path in paths:
             # Filter: skip hidden files or folders
             if path.name.startswith("."):
                 continue
             # Filter: skip common dep/cache folders
-            if path.name in self.IGNORE_FOLDERS: 
+            if path.name in self.effective_ignore: 
                 continue
 
             if path.is_dir():
@@ -104,7 +112,7 @@ class LocusMap:
         # Limit the number of files shown
         files_shown = 0
         for path in files:
-            if files_shown >= self.MAX_FILES_PER_DIR:
+            if files_shown >= self.max_files:
                 break
             
             # Calculate size for display

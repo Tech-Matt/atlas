@@ -26,7 +26,15 @@ classifiers = [
 ]
 dependencies = [
     "textual>=0.70.0",
-    "rich>=13.0.0"
+    "rich>=13.0.0",
+    "psutil>=5.9.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "mypy>=1.9",
+    "types-psutil>=6.0",
 ]
 
 [project.urls]
@@ -46,3 +54,7 @@ exclude = ["*.tests", "*.tests.*", "tests.*", "tests"]
 
 [tool.setuptools.package-data]
 locus_cli = ["ui/*.tcss"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

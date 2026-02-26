@@ -19,13 +19,13 @@ class HardwareProfiler:
         total_mem = total_mem_bytes / (1024 * 1024 * 1024) # Convert from Bytes to GigaBytes
         return round(total_mem, 2)
 
-    def detect_gpu(self) -> dict:
+    def detect_gpu(self) -> dict[str, str | float]:
         """
         Attempts to detect available AI accelerators (Apple Silicon, NVIDIA, AMD).
         Returns a dictionary with 'type' and 'vram_gb' (if applicable).
         """
         # Default fallback
-        gpu_info = {"type": "CPU_ONLY", "vram_gb": 0.0}
+        gpu_info: dict[str, str | float] = {"type": "CPU_ONLY", "vram_gb": 0.0}
 
         # Get system infos
         system = platform.system()
@@ -88,7 +88,8 @@ if __name__ == "__main__":
     profiler = HardwareProfiler()
     ram = profiler.get_total_ram_gb()
     gpu_info = profiler.detect_gpu()
-    system = gpu_info.get("type")
-    vram = gpu_info.get("vram_gb")
+
+    system = gpu_info["type"]
+    vram = gpu_info["vram_gb"]
     print(f"System RAM detected: {ram} GB")
     print(f"System type: {system}, VRAM detected {vram} GB")
