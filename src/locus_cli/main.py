@@ -4,7 +4,7 @@ from .core.map import LocusMap
 from .ui.console import console
 
 # Keep this in sync with pyproject.toml
-__version__ = "0.1.0a2"
+__version__ = "0.1.0"
 
 def cmd_tree(args: argparse.Namespace) -> int:
     """ Handler for: `locus tree` """
