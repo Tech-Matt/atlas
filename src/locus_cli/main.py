@@ -8,14 +8,40 @@ __version__ = "0.1.0"
 
 def cmd_tree(args: argparse.Namespace) -> int:
     """ Handler for: `locus tree` """
-    locus_map = LocusMap(args.path, args.depth, args.max_files, args.ignore) 
-    tree = locus_map.generate()
+    from rich.live import Live
+    from rich.text import Text
+
+    root = Path(args.path)
+    locus_map = LocusMap(str(root), args.depth, args.max_files, args.ignore)
+
+    dirs_done = [0]
+
+    def progress() -> None:
+        dirs_done[0] += 1
+        t = Text()
+        t.append(" Building tree ", style="dim")
+        t.append(str(root), style="dim cyan")
+        t.append(f"  {dirs_done[0]}", style="bold white")
+        t.append(" dirs", style="dim")
+        live.update(t)
+
+    with Live(Text(f" Building tree {root}...", style="dim"), console=console, refresh_per_second=10) as live:
+        tree = locus_map.generate(on_progress=progress)
+
     console.print(tree)
     return 0
 
-def cmd_overview(args: argparse.Namespace) -> int:
-    """ Handler for: `locus overview` """
-    # TODO: think about what to show here
+def cmd_info(args: argparse.Namespace) -> int:
+    """ Handler for: `locus info` """
+    from rich.live import Live
+    from .core.scanner import scan
+    from .ui.info_renderer import render_info, render_progress
+
+    root = Path(args.path)
+    with Live(render_progress(root, None), console=console, refresh_per_second=10) as live:
+        result = scan(root, args.ignore, on_progress=lambda r: live.update(render_progress(root, r)))
+
+    render_info(result, console)
     return 0
 
 def build_parser() -> argparse.ArgumentParser:
@@ -26,7 +52,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Arguments
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    # Subparser allow you to have commands like `locus tree` and `locus overview`
+    # Subparser allow you to have commands like `locus tree` and `locus info`
     subparser = parser.add_subparsers(dest="command")
 
     # ---- tree command ----
@@ -43,6 +69,17 @@ def build_parser() -> argparse.ArgumentParser:
     # If the user invokes `tree`, attach a new attribute called handler and set value to the function
     # cmd_tree()
     tree_parser.set_defaults(handler=cmd_tree)
+
+    # ---- info command ----
+    info_parser = subparser.add_parser("info", help="Show static codebase summary.")
+    info_parser.add_argument("path", nargs="?", default=".", help="Target folder (default: current directory).")
+    info_parser.add_argument(
+        "--ignore",
+        action="append",
+        default=[],
+        help="Ignore files / folders (repeatable). Example: --ignore .venv --ignore node_modules."
+    )
+    info_parser.set_defaults(handler=cmd_info)
 
     return parser
 

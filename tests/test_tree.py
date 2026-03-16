@@ -103,6 +103,32 @@ def test_hidden_files_are_excluded(tmp_path: Path) -> None:
     assert any("visible.py" in label for label in labels)
 
 
+def test_tree_progress_callback_is_called(tmp_path: Path) -> None:
+    """
+    generate() must invoke on_progress at least once when subdirectories exist.
+    This covers the contract between LocusMap and the Live progress display.
+    """
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "nested").mkdir()
+    (tmp_path / "src" / "nested" / "deep").mkdir()
+
+    calls = []
+    locus_map = LocusMap(tmp_path, max_depth=4, max_files=10, ignore=None)
+    locus_map.generate(on_progress=lambda: calls.append(1))
+
+    assert len(calls) > 0
+
+
+def test_tree_progress_callback_not_required(tmp_path: Path) -> None:
+    """
+    generate() must work normally when on_progress is not provided (default None).
+    Ensures backwards compatibility.
+    """
+    locus_map = LocusMap(tmp_path, max_depth=2, max_files=10, ignore=None)
+    tree = locus_map.generate()
+    assert tree is not None
+
+
 def test_full_cli_wiring_returns_zero(tmp_path: Path) -> None:
     """
     End-to-end integration test: calling main() with ["tree", <path>]

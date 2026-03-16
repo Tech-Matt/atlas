@@ -1,4 +1,4 @@
-# `locus overview` — Feature Spec
+# `locus info` — Feature Spec
 
 ## Purpose
 Provide an instant static snapshot of a codebase's structure and identity.
@@ -6,7 +6,7 @@ No LLM required. Pure filesystem analysis.
 
 ## Command Signature
 ```
-locus overview [PATH] [--ignore PATTERN]...
+locus info [PATH] [--ignore PATTERN]...
 ```
 
 ## Output (two sections)
@@ -22,7 +22,7 @@ locus overview [PATH] [--ignore PATTERN]...
 - Notable config files (CI, linters, etc.)
 
 ## Data Model
-`scan(path) -> OverviewResult` where `OverviewResult` is a dataclass.
+`scan(path) -> InfoResult` where `InfoResult` is a dataclass.
 
 ## Edge Cases
 - Empty directories
