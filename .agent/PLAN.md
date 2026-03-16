@@ -52,6 +52,7 @@ Still to be decided, dependent of what the app needs to do, a first implementati
 - ⏳ Need to think about other future commands and namings.
 - ⏳ Progressive rendering for `locus tree` - print tree nodes to stdout as they are discovered, instead of waiting for the full traversal to complete. This is critical for large repos.
 - ⏳ Need to think about a way to show large trees with `locus tree` when the user needs to scroll to much and could lose the idea of what the codebase does.
+- 💡 **Experimental idea**: a horizontal top-to-bottom tree view that prints the whole codebase as a wide, horizontal layout instead of the current deep vertical one. Could be much more visually intuitive for large codebases where vertical depth makes the output hard to scan.
 
 **Phase 2: Intelligence Pipeline**
 - Fast scanner (respects `gitignore`), relationship extractor, caching and other stuff that could be useful to understand a codebase

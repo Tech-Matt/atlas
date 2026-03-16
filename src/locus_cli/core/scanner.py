@@ -1,6 +1,8 @@
 from __future__ import annotations # allows forward references in type hints
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from pathlib import Path
+import heapq
 import os
 
 @dataclass
@@ -18,13 +20,14 @@ class ProjectHeuristics:
     Layer 2: pattern matched facts about the project's identity.
     All fields default to None/empty - not every project has a test dir, etc.
     """
-    project_type: str | None = None     # e.g. "Python Package", "Node Project"
+    project_type: str | None = None       # e.g. "Python Package", "Node Project"
+    dependency_file: str | None = None    # e.g. "pyproject.toml", "package.json"
     entry_points: list[str] = field(default_factory=list)
     test_dirs: list[str] = field(default_factory=list)
     config_files: list[str] = field(default_factory=list)
 
 @dataclass
-class OverviewResult:
+class InfoResult:
     """
     The top-level result returned by scan().
     """
@@ -37,6 +40,8 @@ class OverviewResult:
     # This is to prevent that a single shared class object is created for all class istances
     languages: list[LanguageStat] = field(default_factory=list)
     heuristics: ProjectHeuristics = field(default_factory=ProjectHeuristics)
+    # Top 5 files by size: list of (relative_path_str, bytes), sorted descending
+    largest_files: list[tuple[str, int]] = field(default_factory=list)
 
 
 # -------------------------------------------------------------------
@@ -235,15 +240,115 @@ _DEFAULT_IGNORE: set[str] = {
 }
 
 
-def scan(root: Path, ignore: list[str] | None = None) -> OverviewResult:
+def scan(
+    root: Path,
+    ignore: list[str] | None = None,
+    on_progress: Callable[[InfoResult], None] | None = None,
+) -> InfoResult:
     """
-    Walk the directory tree from `root` and return an OverviewResult.
-    
+    Walk the directory tree from `root` and return an InfoResult.
+
     Args:
-        root: directory to scan. Must be an existing one
-        ignore: Extra directory/file name patterns to skip
+        root:        directory to scan. Must be an existing directory.
+        ignore:      extra directory/file name patterns to skip.
+        on_progress: optional callback invoked after each directory is processed,
+                     receives the partially-populated InfoResult. Used for live
+                     progress displays.
     Returns:
-        fully populated OverviewResult
+        fully populated InfoResult
     """
-    # ---------------------------------------------------------------
-    # GUARD CLAUSE - fail early if root is not a valid folder
+    if not root.exists() or not root.is_dir():
+        raise ValueError(f"{root} is not a valid directory")
+
+    effective_ignore = _DEFAULT_IGNORE | set(ignore or [])
+    result = InfoResult(root=root)
+    language_index: dict[str, int] = {}
+    size_heap: list[tuple[int, str]] = []
+
+    # Iterative DFS via explicit stack — avoids Python recursion limits on deep trees.
+    # Each item is (directory_path, is_root).
+    stack: list[tuple[Path, bool]] = [(root, True)]
+
+    while stack:
+        current, is_root = stack.pop()
+
+        try:
+            entries = list(os.scandir(current))
+        except PermissionError:
+            continue
+
+        subdirs: list[os.DirEntry[str]] = []
+
+        for entry in entries:
+            try:
+                # is_dir / is_symlink / is_file on DirEntry use cached d_type on
+                # Linux/macOS — no extra syscall unlike Path.is_symlink() + stat().
+                is_dir     = entry.is_dir(follow_symlinks=False)
+                is_symlink = entry.is_symlink()
+                is_file    = entry.is_file(follow_symlinks=False)
+            except OSError:
+                continue
+
+            if is_dir and not is_symlink:
+                if entry.name.startswith("."):
+                    # Pruned from traversal, but still check for hidden config dirs (e.g. .github)
+                    if is_root and entry.name in _CONFIG_FILE_NAMES:
+                        result.heuristics.config_files.append(entry.name)
+                    continue
+                if entry.name in effective_ignore:
+                    continue
+
+                subdirs.append(entry)
+
+                if is_root:
+                    if entry.name in _TEST_DIR_NAMES:
+                        result.heuristics.test_dirs.append(entry.name)
+                    if entry.name in _CONFIG_FILE_NAMES:
+                        result.heuristics.config_files.append(entry.name)
+
+            elif is_file and not is_symlink and not entry.name.startswith("."):
+                try:
+                    size = entry.stat().st_size  # cached on DirEntry after first call
+                except OSError:
+                    size = 0
+
+                result.total_files += 1
+                result.total_bytes += size
+
+                rel_path = str(Path(entry.path).relative_to(root))
+                heapq.heappush(size_heap, (size, rel_path))
+                if len(size_heap) > 5:
+                    heapq.heappop(size_heap)
+
+                ext = Path(entry.name).suffix.lower()
+                if ext:
+                    if ext in language_index:
+                        ls = result.languages[language_index[ext]]
+                        ls.file_count += 1
+                        ls.total_bytes += size
+                    else:
+                        ls = LanguageStat(extension=ext, file_count=1, total_bytes=size)
+                        language_index[ext] = len(result.languages)
+                        result.languages.append(ls)
+
+                if is_root:
+                    if result.heuristics.project_type is None and entry.name in _PROJECT_TYPE_MARKERS:
+                        result.heuristics.project_type = _PROJECT_TYPE_MARKERS[entry.name]
+                        result.heuristics.dependency_file = entry.name
+                    if entry.name in _ENTRY_POINT_NAMES:
+                        result.heuristics.entry_points.append(entry.name)
+                    if entry.name in _CONFIG_FILE_NAMES:
+                        result.heuristics.config_files.append(entry.name)
+
+        for d in subdirs:
+            result.total_dirs += 1
+            stack.append((Path(d.path), False))
+
+        if on_progress:
+            on_progress(result)
+
+    result.languages.sort(key=lambda ls: ls.file_count, reverse=True)
+    result.languages = result.languages[:5]
+    result.largest_files = [(path, size) for size, path in sorted(size_heap, reverse=True)]
+
+    return result
