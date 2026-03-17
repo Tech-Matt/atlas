@@ -229,6 +229,19 @@ _EXTENSION_TO_LANGUAGE: dict[str, str] = {
 
 # Default folders to skip — mirrors LocusMap.IGNORE_FOLDERS in map.py.
 # Defined here so scanner.py is self-contained (no circular import needed).
+def _read_gitignore(root: Path) -> set[str]:
+    """Parse .gitignore at root and return a set of name-based patterns to ignore."""
+    gitignore = root / ".gitignore"
+    if not gitignore.is_file():
+        return set()
+    patterns: set[str] = set()
+    for line in gitignore.read_text(errors="replace").splitlines():
+        line = line.strip().lstrip("/")
+        if line and not line.startswith("#") and not line.startswith("!"):
+            patterns.add(line.rstrip("/"))
+    return patterns
+
+
 _DEFAULT_IGNORE: set[str] = {
     "__pycache__", "node_modules", "venv", "myEnv",
     ".git", ".idea", ".vscode", "dist", "build",
@@ -260,7 +273,7 @@ def scan(
     if not root.exists() or not root.is_dir():
         raise ValueError(f"{root} is not a valid directory")
 
-    effective_ignore = _DEFAULT_IGNORE | set(ignore or [])
+    effective_ignore = _DEFAULT_IGNORE | set(ignore or []) | _read_gitignore(root)
     result = InfoResult(root=root)
     language_index: dict[str, int] = {}
     size_heap: list[tuple[int, str]] = []
