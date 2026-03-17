@@ -12,6 +12,9 @@ src/locus_cli.egg-info/top_level.txt
 src/locus_cli/core/map.py
 src/locus_cli/core/profiler.py
 src/locus_cli/core/provisioner.py
+src/locus_cli/core/scanner.py
 src/locus_cli/ui/app.py
 src/locus_cli/ui/console.py
 src/locus_cli/ui/style.tcss
+tests/test_map.py
+tests/test_tree.py

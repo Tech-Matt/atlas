@@ -107,18 +107,15 @@ class LocusMap:
                 patterns.add(line.rstrip("/"))
         return patterns
 
-    def generate(self, on_progress: Callable[[Tree], None] | None = None) -> Tree:
+    def generate(self, on_progress: Callable[[], None] | None = None) -> Tree:
         """
         Starting from the root folder, it creates the tree and then returns it.
 
-        on_progress: optional callback invoked after each directory is processed,
-                     receiving the partial root Tree so far. Used by cmd_tree to
-                     drive a Live streaming display.
+        on_progress: optional callback invoked after each directory is processed.
         """
         root_name = Path(self.root_dir).resolve().name
         tree = Tree(f"[bold blue]{root_name}[/]")
-        _notify: Callable[[], None] | None = (lambda: on_progress(tree)) if on_progress else None
-        self._walk(self.root_dir, tree, current_depth=0, on_progress=_notify)
+        self._walk(self.root_dir, tree, current_depth=0, on_progress=on_progress)
         return tree
 
     # The walk is based on a DFS Search (Depth first search)
