@@ -114,7 +114,7 @@ def test_tree_progress_callback_is_called(tmp_path: Path) -> None:
 
     calls = []
     locus_map = LocusMap(tmp_path, max_depth=4, max_files=10, ignore=None)
-    locus_map.generate(on_progress=lambda: calls.append(1))
+    locus_map.generate(on_progress=lambda tree: calls.append(1))
 
     assert len(calls) > 0
 
@@ -147,6 +147,24 @@ def test_tree_gitignore_missing_is_fine(tmp_path: Path) -> None:
     locus_map = LocusMap(tmp_path, max_depth=2, max_files=10, ignore=None)
     tree = locus_map.generate()
     assert tree is not None
+
+
+def test_tree_on_progress_receives_partial_tree(tmp_path: Path) -> None:
+    """on_progress callback must be called with the partial Tree and it must already have nodes."""
+    (tmp_path / "src").mkdir()
+    (tmp_path / "src" / "main.py").write_text("x = 1")
+    (tmp_path / "README.md").write_text("# hello")
+
+    snapshots: list[int] = []
+
+    def capture(tree) -> None:
+        snapshots.append(len(list(tree.children)))
+
+    locus_map = LocusMap(tmp_path, max_depth=2, max_files=10, ignore=None)
+    locus_map.generate(on_progress=capture)
+
+    assert len(snapshots) > 0
+    assert any(count > 0 for count in snapshots)
 
 
 def test_full_cli_wiring_returns_zero(tmp_path: Path) -> None:
