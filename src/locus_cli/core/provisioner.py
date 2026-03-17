@@ -1,6 +1,6 @@
-import os
 import platform
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 
 class Provisioner:
@@ -38,12 +38,10 @@ class Provisioner:
         }
     }
 
-    def __init__(self) -> None:
-        # Define where Locus will store its data
-        self.locus_dir = Path.home() / ".locus"
+    def __init__(self, locus_dir: Path | None = None) -> None:
+        self.locus_dir = locus_dir or (Path.home() / ".locus")
         self.models_dir = self.locus_dir / "models"
         self.bin_dir = self.locus_dir / "bin"
-        # Handle directories already existing
         self.locus_dir.mkdir(parents=True, exist_ok=True)
         self.models_dir.mkdir(parents=True, exist_ok=True)
         self.bin_dir.mkdir(parents=True, exist_ok=True)
@@ -81,13 +79,43 @@ class Provisioner:
         # Default case - Tier 4
         return 4
     
-    def get_binary_preference(self, os_name: str, gpu_type: str, user_choice: str = "auto"):
-        """
-        Determines which llama.cpp to download
-        user_choice can be 'CUDA', 'Vulkan', 'CPU' or 'auto'.
-        """
-        # TODO: Map the OS and GPU type to the correct key in self.BINARIES
-        pass
+    def get_model_path(self, tier: int) -> Path:
+        """Return the local path where the model for this tier is (or would be) stored."""
+        filename, _ = self.MODELS[tier]
+        return self.models_dir / filename
 
-    def download_file(self):
-        pass
+    def is_model_cached(self, tier: int) -> bool:
+        """Return True if the model file for this tier already exists on disk."""
+        return self.get_model_path(tier).exists()
+
+    def download_model(
+        self,
+        tier: int,
+        on_progress: Callable[[int, int], None] | None = None,
+    ) -> Path:
+        """
+        Download the GGUF model for the given tier to ~/.locus/models/.
+        Downloads to a .tmp file first and renames on success (atomic).
+
+        on_progress: called with (bytes_downloaded, total_bytes).
+        """
+        dest = self.get_model_path(tier)
+        if dest.exists():
+            return dest
+
+        _, url = self.MODELS[tier]
+        tmp = dest.with_suffix(".tmp")
+
+        def _reporthook(block_num: int, block_size: int, total_size: int) -> None:
+            if on_progress and total_size > 0:
+                downloaded = min(block_num * block_size, total_size)
+                on_progress(downloaded, total_size)
+
+        try:
+            urllib.request.urlretrieve(url, str(tmp), _reporthook)
+            tmp.rename(dest)
+        except Exception:
+            tmp.unlink(missing_ok=True)
+            raise
+
+        return dest

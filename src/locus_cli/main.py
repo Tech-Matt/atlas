@@ -8,11 +8,11 @@ __version__ = "0.1.0"
 
 def cmd_tree(args: argparse.Namespace) -> int:
     """ Handler for: `locus tree` """
-    from rich.live import Live
     locus_map = LocusMap(args.path, args.depth, args.max_files, args.ignore)
-    with Live(console=console, refresh_per_second=12) as live:
-        tree = locus_map.generate(on_progress=live.update)
-        live.update(tree)
+    with console.status(f"[dim]Scanning {args.path}[/]", spinner="dots"):
+        tree = locus_map.generate()
+    console.rule(f"[dim]{args.path}[/]")
+    console.print(tree)
     return 0
 
 def cmd_info(args: argparse.Namespace) -> int:
@@ -29,8 +29,39 @@ def cmd_info(args: argparse.Namespace) -> int:
 
 
 def cmd_overview(args: argparse.Namespace) -> int:
-    """ Handler for: `locus overview` """
-    # TODO: think about what to show here
+    """ Handler for: `locus overview` — launches the Textual TUI """
+    from .core.scanner import scan
+    from .core.extractor import extract_context
+    from .core.profiler import HardwareProfiler
+    from .core.provisioner import Provisioner
+    from .ui.overview_app import OverviewApp
+
+    path = Path(args.path)
+
+    # Fast pre-flight: scan + context extraction before opening TUI
+    with console.status("[dim]Scanning codebase...[/]", spinner="dots"):
+        result = scan(path, args.ignore)
+        context = extract_context(path, result)
+
+    profiler = HardwareProfiler()
+    gpu_info = profiler.detect_gpu()
+    ram_gb = profiler.get_total_ram_gb()
+
+    provisioner = Provisioner()
+    tier = provisioner.determine_tier(
+        ram_gb=ram_gb,
+        gpu_type=str(gpu_info.get("type", "CPU_ONLY")),
+        vram_gb=float(gpu_info.get("vram_gb", 0.0)),
+    )
+
+    app = OverviewApp(
+        scan_path=path,
+        context=context,
+        tier=tier,
+        provisioner=provisioner,
+        gpu_info=gpu_info,
+    )
+    app.run()
     return 0
 
 def build_parser() -> argparse.ArgumentParser:
@@ -69,6 +100,17 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ignore files / folders (repeatable)."
     )
     info_parser.set_defaults(handler=cmd_info)
+
+    # ---- overview command ----
+    overview_parser = subparser.add_parser("overview", help="AI-powered codebase overview (local LLM).")
+    overview_parser.add_argument("path", nargs="?", default=".", help="Target folder (default: current directory).")
+    overview_parser.add_argument(
+        "--ignore",
+        action="append",
+        default=[],
+        help="Ignore files / folders (repeatable)."
+    )
+    overview_parser.set_defaults(handler=cmd_overview)
 
     return parser
 

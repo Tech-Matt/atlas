@@ -27,7 +27,9 @@ classifiers = [
 dependencies = [
     "textual>=0.70.0",
     "rich>=13.0.0",
-    "psutil>=5.9.0"
+    "psutil>=5.9.0",
+    # CPU-only by default. For GPU support see README.
+    "llama-cpp-python>=0.2.90",
 ]
 
 [project.optional-dependencies]
