@@ -42,7 +42,8 @@ def check_gpu_support() -> bool:
     try:
         from llama_cpp import llama_supports_gpu_offload  # type: ignore[import]
         return bool(llama_supports_gpu_offload())
-    except (ImportError, AttributeError):
+    except Exception:
+        # ImportError, AttributeError, OSError (native lib load failure), etc.
         return False
 
 
@@ -90,9 +91,9 @@ def stream_overview(
     """
     try:
         from llama_cpp import Llama  # type: ignore[import]
-    except ImportError as exc:
+    except Exception as exc:
         raise ImportError(
-            "llama-cpp-python is required for `locus overview`.\n"
+            f"Failed to load llama-cpp-python: {exc}\n"
             "Install it with: pip install llama-cpp-python"
         ) from exc
 

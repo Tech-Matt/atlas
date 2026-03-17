@@ -214,6 +214,18 @@ class OverviewApp(App):
         status = self.query_one("#status", Static)
         output = self.query_one("#output", Static)
         progress = self.query_one("#progress-bar", ProgressBar)
+        try:
+            self._pipeline_body(stream_overview, status, output, progress)
+        except Exception as exc:
+            self.call_from_thread(
+                status.update,
+                f"[red bold]Error:[/red bold] [red]{exc}[/red]\n\n"
+                "[dim]Press [bold]q[/bold] to quit.[/dim]",
+            )
+            self.phase = "done"
+            return
+
+    def _pipeline_body(self, stream_overview, status, output, progress) -> None:
 
         # ── Step 1: download model if needed ──────────────────────────
         if not self.provisioner.is_model_cached(self.tier):
@@ -221,12 +233,26 @@ class OverviewApp(App):
             self.call_from_thread(
                 status.update, f"[dim]Downloading {model_name}...[/dim]"
             )
-            self.call_from_thread(setattr, progress, "display", True)
 
             def _on_progress(downloaded: int, total: int) -> None:
-                pct = int(downloaded / total * 100)
-                self.call_from_thread(progress.update, progress=pct)
+                mb = downloaded / (1024 * 1024)
+                if total > 0:
+                    pct = int(downloaded / total * 100)
+                    total_mb = total / (1024 * 1024)
+                    self.call_from_thread(
+                        status.update,
+                        f"[dim]Downloading {model_name}...  "
+                        f"{mb:.0f} / {total_mb:.0f} MB  ({pct}%)[/dim]",
+                    )
+                    self.call_from_thread(progress.update, progress=pct)
+                else:
+                    # Server didn't send Content-Length — show bytes only
+                    self.call_from_thread(
+                        status.update,
+                        f"[dim]Downloading {model_name}...  {mb:.0f} MB[/dim]",
+                    )
 
+            self.call_from_thread(setattr, progress, "display", True)
             self.provisioner.download_model(self.tier, on_progress=_on_progress)
             self.call_from_thread(setattr, progress, "display", False)
 

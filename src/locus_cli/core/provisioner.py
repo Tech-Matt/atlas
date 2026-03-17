@@ -88,6 +88,9 @@ class Provisioner:
         """Return True if the model file for this tier already exists on disk."""
         return self.get_model_path(tier).exists()
 
+    # Chunk size for streaming downloads (1 MB)
+    _CHUNK = 1024 * 1024
+
     def download_model(
         self,
         tier: int,
@@ -95,9 +98,11 @@ class Provisioner:
     ) -> Path:
         """
         Download the GGUF model for the given tier to ~/.locus/models/.
+        Streams in 1 MB chunks so progress updates fire frequently.
         Downloads to a .tmp file first and renames on success (atomic).
 
         on_progress: called with (bytes_downloaded, total_bytes).
+                     total_bytes is -1 when the server does not send Content-Length.
         """
         dest = self.get_model_path(tier)
         if dest.exists():
@@ -106,13 +111,22 @@ class Provisioner:
         _, url = self.MODELS[tier]
         tmp = dest.with_suffix(".tmp")
 
-        def _reporthook(block_num: int, block_size: int, total_size: int) -> None:
-            if on_progress and total_size > 0:
-                downloaded = min(block_num * block_size, total_size)
-                on_progress(downloaded, total_size)
-
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "locus-cli/0.1.0"}
+        )
         try:
-            urllib.request.urlretrieve(url, str(tmp), _reporthook)
+            with urllib.request.urlopen(req) as response:
+                total = int(response.headers.get("Content-Length", -1))
+                downloaded = 0
+                with open(tmp, "wb") as f:
+                    while True:
+                        chunk = response.read(self._CHUNK)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if on_progress:
+                            on_progress(downloaded, total)
             tmp.rename(dest)
         except Exception:
             tmp.unlink(missing_ok=True)
