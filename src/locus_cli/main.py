@@ -29,16 +29,18 @@ def cmd_info(args: argparse.Namespace) -> int:
 
 
 def cmd_overview(args: argparse.Namespace) -> int:
-    """ Handler for: `locus overview` — launches the Textual TUI """
+    """ Handler for: `locus overview` — setup TUI, then streams to terminal """
     from .core.scanner import scan
     from .core.extractor import extract_context
     from .core.profiler import HardwareProfiler
     from .core.provisioner import Provisioner
+    from .core.inference import stream_overview
     from .ui.overview_app import OverviewApp
+    from rich.progress import Progress, BarColumn, DownloadColumn, TransferSpeedColumn
 
     path = Path(args.path)
 
-    # Fast pre-flight: scan + context extraction before opening TUI
+    # Pre-flight: scan + context extraction before opening TUI
     with console.status("[dim]Scanning codebase...[/]", spinner="dots"):
         result = scan(path, args.ignore)
         context = extract_context(path, result)
@@ -54,14 +56,48 @@ def cmd_overview(args: argparse.Namespace) -> int:
         vram_gb=float(gpu_info.get("vram_gb", 0.0)),
     )
 
-    app = OverviewApp(
-        scan_path=path,
-        context=context,
-        tier=tier,
-        provisioner=provisioner,
-        gpu_info=gpu_info,
-    )
-    app.run()
+    # Setup screen: user picks GPU or CPU, app returns n_gpu_layers
+    app = OverviewApp(tier=tier, provisioner=provisioner, gpu_info=gpu_info)
+    n_gpu_layers: int = app.run() or 0
+
+    # Download model if not cached (Rich progress bar, no TUI)
+    if not provisioner.is_model_cached(tier):
+        model_name, _ = provisioner.MODELS[tier]
+        with Progress(
+            "[dim]{task.description}[/dim]",
+            BarColumn(),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            console=console,
+        ) as progress:
+            task_id = progress.add_task(f"Downloading {model_name}", total=None)
+
+            def _on_dl(downloaded: int, total: int) -> None:
+                progress.update(task_id, completed=downloaded, total=total if total > 0 else None)
+
+            provisioner.download_model(tier, on_progress=_on_dl)
+
+    # Stream inference, re-rendering as markdown every 15 tokens
+    from rich.live import Live
+    from rich.markdown import Markdown
+
+    buf: list[str] = []
+    console.rule("[dim]Overview[/dim]")
+    with Live(Markdown(""), console=console, refresh_per_second=6, vertical_overflow="visible") as live:
+        def _on_token(token: str) -> None:
+            buf.append(token)
+            if len(buf) % 5 == 0:
+                live.update(Markdown("".join(buf)))
+
+        stream_overview(
+            model_path=provisioner.get_model_path(tier),
+            ctx=context,
+            n_gpu_layers=n_gpu_layers,
+            on_token=_on_token,
+        )
+        live.update(Markdown("".join(buf)))  # final flush
+
+    console.rule()
     return 0
 
 def build_parser() -> argparse.ArgumentParser:
