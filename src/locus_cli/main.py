@@ -8,26 +8,10 @@ __version__ = "0.1.0"
 
 def cmd_tree(args: argparse.Namespace) -> int:
     """ Handler for: `locus tree` """
-    from rich.live import Live
-    from rich.text import Text
-
-    root = Path(args.path)
-    locus_map = LocusMap(str(root), args.depth, args.max_files, args.ignore)
-
-    dirs_done = [0]
-
-    def progress() -> None:
-        dirs_done[0] += 1
-        t = Text()
-        t.append(" Building tree ", style="dim")
-        t.append(str(root), style="dim cyan")
-        t.append(f"  {dirs_done[0]}", style="bold white")
-        t.append(" dirs", style="dim")
-        live.update(t)
-
-    with Live(Text(f" Building tree {root}...", style="dim"), console=console, refresh_per_second=10) as live:
-        tree = locus_map.generate(on_progress=progress)
-
+    locus_map = LocusMap(args.path, args.depth, args.max_files, args.ignore)
+    with console.status(f"[dim]Scanning {args.path}[/]", spinner="dots"):
+        tree = locus_map.generate()
+    console.rule(f"[dim]{args.path}[/]")
     console.print(tree)
     return 0
 
@@ -36,12 +20,84 @@ def cmd_info(args: argparse.Namespace) -> int:
     from rich.live import Live
     from .core.scanner import scan
     from .ui.info_renderer import render_info, render_progress
-
-    root = Path(args.path)
-    with Live(render_progress(root, None), console=console, refresh_per_second=10) as live:
-        result = scan(root, args.ignore, on_progress=lambda r: live.update(render_progress(root, r)))
-
+    path = Path(args.path)
+    with Live(console=console, refresh_per_second=10) as live:
+        result = scan(path, args.ignore, on_progress=lambda r: live.update(render_progress(path, r)))
+        live.update(render_progress(path, result))
     render_info(result, console)
+    return 0
+
+
+def cmd_overview(args: argparse.Namespace) -> int:
+    """ Handler for: `locus overview` — setup TUI, then streams to terminal """
+    from .core.scanner import scan
+    from .core.extractor import extract_context
+    from .core.profiler import HardwareProfiler
+    from .core.provisioner import Provisioner
+    from .core.inference import stream_overview
+    from .ui.overview_app import OverviewApp
+    from rich.progress import Progress, BarColumn, DownloadColumn, TransferSpeedColumn
+
+    path = Path(args.path)
+
+    # Pre-flight: scan + context extraction before opening TUI
+    with console.status("[dim]Scanning codebase...[/]", spinner="dots"):
+        result = scan(path, args.ignore)
+        context = extract_context(path, result)
+
+    profiler = HardwareProfiler()
+    gpu_info = profiler.detect_gpu()
+    ram_gb = profiler.get_total_ram_gb()
+
+    provisioner = Provisioner()
+    tier = provisioner.determine_tier(
+        ram_gb=ram_gb,
+        gpu_type=str(gpu_info.get("type", "CPU_ONLY")),
+        vram_gb=float(gpu_info.get("vram_gb", 0.0)),
+    )
+
+    # Setup screen: user picks GPU or CPU, app returns n_gpu_layers
+    app = OverviewApp(tier=tier, provisioner=provisioner, gpu_info=gpu_info)
+    n_gpu_layers: int = app.run() or 0
+
+    # Download model if not cached (Rich progress bar, no TUI)
+    if not provisioner.is_model_cached(tier):
+        model_name, _ = provisioner.MODELS[tier]
+        with Progress(
+            "[dim]{task.description}[/dim]",
+            BarColumn(),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            console=console,
+        ) as progress:
+            task_id = progress.add_task(f"Downloading {model_name}", total=None)
+
+            def _on_dl(downloaded: int, total: int) -> None:
+                progress.update(task_id, completed=downloaded, total=total if total > 0 else None)
+
+            provisioner.download_model(tier, on_progress=_on_dl)
+
+    # Stream inference, re-rendering as markdown every 15 tokens
+    from rich.live import Live
+    from rich.markdown import Markdown
+
+    buf: list[str] = []
+    console.rule("[dim]Overview[/dim]")
+    with Live(Markdown(""), console=console, refresh_per_second=6, vertical_overflow="visible") as live:
+        def _on_token(token: str) -> None:
+            buf.append(token)
+            if len(buf) % 5 == 0:
+                live.update(Markdown("".join(buf)))
+
+        stream_overview(
+            model_path=provisioner.get_model_path(tier),
+            ctx=context,
+            n_gpu_layers=n_gpu_layers,
+            on_token=_on_token,
+        )
+        live.update(Markdown("".join(buf)))  # final flush
+
+    console.rule()
     return 0
 
 def build_parser() -> argparse.ArgumentParser:
@@ -52,7 +108,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     # Arguments
     parser.add_argument("--version", action="version", version=f"%(prog)s {__version__}")
-    # Subparser allow you to have commands like `locus tree` and `locus info`
+    # Subparser allow you to have commands like `locus tree` and `locus overview`
     subparser = parser.add_subparsers(dest="command")
 
     # ---- tree command ----
@@ -71,15 +127,26 @@ def build_parser() -> argparse.ArgumentParser:
     tree_parser.set_defaults(handler=cmd_tree)
 
     # ---- info command ----
-    info_parser = subparser.add_parser("info", help="Show static codebase summary.")
+    info_parser = subparser.add_parser("info", help="Show static codebase analysis.")
     info_parser.add_argument("path", nargs="?", default=".", help="Target folder (default: current directory).")
     info_parser.add_argument(
         "--ignore",
         action="append",
         default=[],
-        help="Ignore files / folders (repeatable). Example: --ignore .venv --ignore node_modules."
+        help="Ignore files / folders (repeatable)."
     )
     info_parser.set_defaults(handler=cmd_info)
+
+    # ---- overview command ----
+    overview_parser = subparser.add_parser("overview", help="AI-powered codebase overview (local LLM).")
+    overview_parser.add_argument("path", nargs="?", default=".", help="Target folder (default: current directory).")
+    overview_parser.add_argument(
+        "--ignore",
+        action="append",
+        default=[],
+        help="Ignore files / folders (repeatable)."
+    )
+    overview_parser.set_defaults(handler=cmd_overview)
 
     return parser
 

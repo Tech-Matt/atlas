@@ -58,6 +58,12 @@ locus tree
 # Show a tree of a specific path, with custom depth and ignore rules
 locus tree /path/to/codebase --depth 3 --ignore build --ignore dist
 
+# Show a static codebase summary (languages, project type, largest files)
+locus info
+
+# Show info for a specific path, ignoring extra folders
+locus info /path/to/codebase --ignore build --ignore dist
+
 # Print version
 locus --version
 ```
@@ -70,9 +76,11 @@ locus --version
 - [x] **Hardware profiling** (Apple Silicon, NVIDIA, AMD, CPU-only detection)
 - [x] **`locus tree` CLI command** (depth, max-files, ignore flags)
 - [x] **PyPI packaging** (`pip install locus-cli`)
-- [ ] **`locus overview`** — static codebase stats (file counts, languages, largest folders)
-- [ ] **Progressive rendering** — stream tree output incrementally for large repos
-- [ ] **Local LLM summaries** — auto-download and run architecture-optimized models
+- [x] **`locus info`** — static codebase snapshot (file counts, language breakdown, project type, largest files)
+- [x] **Progressive rendering** — live progress display while scanning for both `tree` and `info`
+- [x] **File type icons** — per-extension emoji in tree view with ASCII fallback for legacy terminals
+- [ ] **`locus overview`** — AI-powered codebase summary using a local LLM
+- [ ] **Local LLM inference** — auto-download and run architecture-optimized models (llama.cpp)
 - [ ] **TUI** — full interactive terminal UI
 
 ---

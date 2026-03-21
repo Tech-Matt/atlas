@@ -186,6 +186,37 @@ def test_scan_no_dependency_file_gives_none(tmp_path: Path) -> None:
 
 
 # ---------------------------------------------------------------------------
+# .gitignore support
+# ---------------------------------------------------------------------------
+
+def test_scan_respects_gitignore(tmp_path: Path) -> None:
+    """Folders listed in .gitignore at the root should be excluded from scan."""
+    (tmp_path / ".gitignore").write_text("secret_dir\n")
+    (tmp_path / "secret_dir").mkdir()
+    (tmp_path / "secret_dir" / "private.py").write_text("x = 1")
+    (tmp_path / "main.py").write_text("x = 1")
+    result = scan(tmp_path)
+    assert result.total_files == 1  # only main.py, not private.py
+
+
+def test_scan_gitignore_missing_is_fine(tmp_path: Path) -> None:
+    """If no .gitignore exists, scan() must not crash."""
+    (tmp_path / "main.py").write_text("x = 1")
+    result = scan(tmp_path)
+    assert result.total_files == 1
+
+
+def test_scan_gitignore_ignores_comments_and_blanks(tmp_path: Path) -> None:
+    """Comment lines and blank lines in .gitignore must not be treated as patterns."""
+    (tmp_path / ".gitignore").write_text("# this is a comment\n\ndist\n")
+    (tmp_path / "dist").mkdir()
+    (tmp_path / "dist" / "out.js").write_text("x")
+    (tmp_path / "main.py").write_text("x = 1")
+    result = scan(tmp_path)
+    assert result.total_files == 1
+
+
+# ---------------------------------------------------------------------------
 # End-to-end CLI wiring
 # ---------------------------------------------------------------------------
 

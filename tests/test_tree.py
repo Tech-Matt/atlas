@@ -129,6 +129,27 @@ def test_tree_progress_callback_not_required(tmp_path: Path) -> None:
     assert tree is not None
 
 
+def test_tree_respects_gitignore(tmp_path: Path) -> None:
+    """Folders listed in .gitignore at the root should not appear in the tree."""
+    (tmp_path / ".gitignore").write_text("build_output\n")
+    (tmp_path / "build_output").mkdir()
+    (tmp_path / "build_output" / "artifact.js").write_text("x")
+    (tmp_path / "main.py").write_text("x = 1")
+
+    locus_map = LocusMap(tmp_path, max_depth=2, max_files=10, ignore=None)
+    tree = locus_map.generate()
+    labels = [str(c.label) for c in tree.children]
+    assert not any("build_output" in label for label in labels)
+
+
+def test_tree_gitignore_missing_is_fine(tmp_path: Path) -> None:
+    """If no .gitignore exists, LocusMap.generate() must not crash."""
+    locus_map = LocusMap(tmp_path, max_depth=2, max_files=10, ignore=None)
+    tree = locus_map.generate()
+    assert tree is not None
+
+
+
 def test_full_cli_wiring_returns_zero(tmp_path: Path) -> None:
     """
     End-to-end integration test: calling main() with ["tree", <path>]

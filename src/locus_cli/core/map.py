@@ -89,17 +89,29 @@ class LocusMap:
         self.max_depth = max_depth
         self.max_files = max_files
         # Combine user excluded folders to default excluded folders
+        gitignore_patterns = self._read_gitignore(root_dir)
         if ignore is not None:
-            self.effective_ignore = self.IGNORE_FOLDERS | set(ignore)
+            self.effective_ignore = self.IGNORE_FOLDERS | set(ignore) | gitignore_patterns
         else:
-            self.effective_ignore = self.IGNORE_FOLDERS
+            self.effective_ignore = self.IGNORE_FOLDERS | gitignore_patterns
+
+    @staticmethod
+    def _read_gitignore(root: Path | str) -> set[str]:
+        gitignore = Path(root) / ".gitignore"
+        if not gitignore.is_file():
+            return set()
+        patterns: set[str] = set()
+        for line in gitignore.read_text(errors="replace").splitlines():
+            line = line.strip().lstrip("/")
+            if line and not line.startswith("#") and not line.startswith("!"):
+                patterns.add(line.rstrip("/"))
+        return patterns
 
     def generate(self, on_progress: Callable[[], None] | None = None) -> Tree:
         """
         Starting from the root folder, it creates the tree and then returns it.
 
         on_progress: optional callback invoked after each directory is processed.
-                     Used by cmd_tree to drive a Live progress display.
         """
         root_name = Path(self.root_dir).resolve().name
         tree = Tree(f"[bold blue]{root_name}[/]")

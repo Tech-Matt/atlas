@@ -1,6 +1,6 @@
-import os
 import platform
 import urllib.request
+from collections.abc import Callable
 from pathlib import Path
 
 class Provisioner:
@@ -38,12 +38,10 @@ class Provisioner:
         }
     }
 
-    def __init__(self) -> None:
-        # Define where Locus will store its data
-        self.locus_dir = Path.home() / ".locus"
+    def __init__(self, locus_dir: Path | None = None) -> None:
+        self.locus_dir = locus_dir or (Path.home() / ".locus")
         self.models_dir = self.locus_dir / "models"
         self.bin_dir = self.locus_dir / "bin"
-        # Handle directories already existing
         self.locus_dir.mkdir(parents=True, exist_ok=True)
         self.models_dir.mkdir(parents=True, exist_ok=True)
         self.bin_dir.mkdir(parents=True, exist_ok=True)
@@ -81,13 +79,57 @@ class Provisioner:
         # Default case - Tier 4
         return 4
     
-    def get_binary_preference(self, os_name: str, gpu_type: str, user_choice: str = "auto"):
-        """
-        Determines which llama.cpp to download
-        user_choice can be 'CUDA', 'Vulkan', 'CPU' or 'auto'.
-        """
-        # TODO: Map the OS and GPU type to the correct key in self.BINARIES
-        pass
+    def get_model_path(self, tier: int) -> Path:
+        """Return the local path where the model for this tier is (or would be) stored."""
+        filename, _ = self.MODELS[tier]
+        return self.models_dir / filename
 
-    def download_file(self):
-        pass
+    def is_model_cached(self, tier: int) -> bool:
+        """Return True if the model file for this tier already exists on disk."""
+        return self.get_model_path(tier).exists()
+
+    # Chunk size for streaming downloads (1 MB)
+    _CHUNK = 1024 * 1024
+
+    def download_model(
+        self,
+        tier: int,
+        on_progress: Callable[[int, int], None] | None = None,
+    ) -> Path:
+        """
+        Download the GGUF model for the given tier to ~/.locus/models/.
+        Streams in 1 MB chunks so progress updates fire frequently.
+        Downloads to a .tmp file first and renames on success (atomic).
+
+        on_progress: called with (bytes_downloaded, total_bytes).
+                     total_bytes is -1 when the server does not send Content-Length.
+        """
+        dest = self.get_model_path(tier)
+        if dest.exists():
+            return dest
+
+        _, url = self.MODELS[tier]
+        tmp = dest.with_suffix(".tmp")
+
+        req = urllib.request.Request(
+            url, headers={"User-Agent": "locus-cli/0.1.0"}
+        )
+        try:
+            with urllib.request.urlopen(req) as response:
+                total = int(response.headers.get("Content-Length", -1))
+                downloaded = 0
+                with open(tmp, "wb") as f:
+                    while True:
+                        chunk = response.read(self._CHUNK)
+                        if not chunk:
+                            break
+                        f.write(chunk)
+                        downloaded += len(chunk)
+                        if on_progress:
+                            on_progress(downloaded, total)
+            tmp.rename(dest)
+        except Exception:
+            tmp.unlink(missing_ok=True)
+            raise
+
+        return dest
