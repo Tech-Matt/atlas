@@ -119,3 +119,38 @@ class TutorSession:
         self._summary_ready.set()
         if self._on_summary_ready_cb is not None:
             self._on_summary_ready_cb()
+
+    # ------------------------------------------------------------------ #
+    # Prompt builders
+    # ------------------------------------------------------------------ #
+
+    def build_summary_prompt(self) -> str:
+        return (
+            "You are a code tutor. Read the following file and write a structured summary "
+            "for a developer who is about to read it line by line.\n\n"
+            "Cover:\n"
+            "1. What this file does overall (1-2 sentences)\n"
+            "2. Its key components — list the main classes and functions with a one-line description of each\n"
+            "3. Any important patterns, conventions, or design decisions a reader should know before diving in\n\n"
+            "Be concise but thorough. Target 150-250 words.\n\n"
+            f"FILE: {self.file_path.name}\n"
+            "---\n"
+            f"{self._content}"
+        )
+
+    def build_line_prompt(self, line_num: int) -> str:
+        # line_num is 1-indexed
+        line_content = self.lines[line_num - 1] if 1 <= line_num <= len(self.lines) else ""
+        return (
+            "You are a code tutor helping a developer understand a file line by line.\n\n"
+            f"FILE SUMMARY:\n{self.file_summary}\n\n"
+            f"FULL FILE ({self.file_path.name}):\n"
+            "---\n"
+            f"{self._content}\n"
+            "---\n\n"
+            f"The developer is currently on line {line_num}:\n"
+            f">>> {line_content}\n\n"
+            "Explain this line in plain language. If the line is part of a larger logical block "
+            "(a function, class, loop, condition), also explain its role in that context. "
+            "Be concise — 2-5 sentences."
+        )
