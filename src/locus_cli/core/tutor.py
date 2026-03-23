@@ -105,20 +105,35 @@ class TutorSession:
         self._cursor_line = line_num
 
     # ------------------------------------------------------------------ #
-    # Worker A — file summary (placeholder, started post-validation)
+    # Worker A — file summary (runs in background thread)
     # ------------------------------------------------------------------ #
 
     def _start_worker_a(self) -> None:
-        """Start Worker A in a background thread (no-op until LLM is wired)."""
-        t = threading.Thread(target=self._worker_a, daemon=True)
+        """Start Worker A in a background thread."""
+        t = threading.Thread(target=self._worker_a_body, daemon=True)
         t.start()
 
-    def _worker_a(self) -> None:
-        """Worker A: generate file summary via LLM (stub)."""
-        # Full implementation added in a later task when inference is wired.
+    def _worker_a_body(self) -> None:
+        self._run_worker_a(
+            llm_fn=self._call_llm,
+            on_done=self._on_summary_ready,
+        )
+
+    def _run_worker_a(
+        self,
+        llm_fn: Callable[[str], str],
+        on_done: Callable[[], None],
+    ) -> None:
+        """Generate file summary synchronously. Called by the Worker A thread."""
+        self.file_summary = llm_fn(self.build_summary_prompt())
         self._summary_ready.set()
-        if self._on_summary_ready_cb is not None:
+        on_done()
+
+    def _on_summary_ready(self) -> None:
+        """Called by Worker A when the summary is ready. Fires the app callback and starts Worker B."""
+        if self._on_summary_ready_cb:
             self._on_summary_ready_cb()
+        self._start_worker_b()
 
     # ------------------------------------------------------------------ #
     # Prompt builders

@@ -1,5 +1,6 @@
 """Tests for core/tutor.py — no LLM required."""
 from __future__ import annotations
+import threading
 import pytest
 from pathlib import Path
 
@@ -151,3 +152,37 @@ def test_request_explanation_does_not_regenerate_cached(tmp_path: Path) -> None:
     result = session.request_explanation(1, _llm_fn=counting_llm)
     assert result == "already cached"
     assert call_count["n"] == 0
+
+
+# ---------------------------------------------------------------------------
+# TutorSession — Worker A (file summary)
+# ---------------------------------------------------------------------------
+
+def test_on_summary_ready_fires_after_summary_set(tmp_path: Path) -> None:
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "a.py"
+    src.write_text("x = 1\n")
+
+    fired = threading.Event()
+
+    def fake_llm(prompt: str) -> str:
+        return "A summary."
+
+    session = TutorSession(
+        src,
+        n_gpu_layers=0,
+        _skip_workers=True,
+    )
+    session._run_worker_a(llm_fn=fake_llm, on_done=lambda: fired.set())
+    assert fired.wait(timeout=2), "on_summary_ready was never called"
+    assert session.file_summary == "A summary."
+
+
+def test_summary_ready_event_is_set_after_worker_a(tmp_path: Path) -> None:
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "a.py"
+    src.write_text("x = 1\n")
+
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+    session._run_worker_a(llm_fn=lambda p: "summary", on_done=lambda: None)
+    assert session._summary_ready.is_set()
