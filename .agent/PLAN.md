@@ -25,9 +25,7 @@ Many features of the app are still matter of brainstorming so any useful suggest
 **Missing / WIP:**
 - `ui/style.tcss` still empty
 - `locus tree` needs speedup and or real time printing
-- `locus overview` command (not yet designed, or implemented, no idea on what to do with this command)
 - Need to think about other useful commands both "static" and with "LLMs"
-- Inference runtime (llama.cpp management, prompt pipeline).
 - Cloud provider integrations (OpenAI, Claude, Gemini)
 - Repository analysis pipeline
 - Responsive cool looking TUI
@@ -48,7 +46,8 @@ Still to be decided, dependent of what the app needs to do, a first implementati
 
 **Phase 1: CLI Skeleton (In progress)**
 - ✅ `locus tree` implemented with depth, max_files, and ignore flags.
-- ⏳`locus overview` to be designed and implemented. Need to chose what this command does.
+- ✅ `locus overview` — AI-powered codebase overview using local LLM.
+- ✅ `locus tutor <file>` — interactive line-by-line code tutor with local LLM.
 - ⏳ Need to think about other future commands and namings.
 - ⏳ Progressive rendering for `locus tree` - print tree nodes to stdout as they are discovered, instead of waiting for the full traversal to complete. This is critical for large repos.
 - ⏳ Need to think about a way to show large trees with `locus tree` when the user needs to scroll to much and could lose the idea of what the codebase does.
@@ -72,6 +71,13 @@ Still to be decided, dependent of what the app needs to do, a first implementati
 
 **Phase 7: Documentation**
 - Update README, add troubleshooting and provider docs.
+
+---
+
+## Future Commands (Post v1.0)
+
+### `locus tutor <file>` ✅
+Implemented on `feature/tutor-command`. Interactive line-by-line code tutoring with a Textual TUI (split layout: code left, explanation right). Uses local LLM with background prefetch for instant explanations.
 
 ## 5) Definition of Done (v0.1.0)
 No idea for now

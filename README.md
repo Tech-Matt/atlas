@@ -2,32 +2,60 @@
 
 # LOCUS 🗺️
 
-**The free, 100% private, local-LLM codebase cartographer for your terminal.**
+**Regain control of your codebase.**
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![PyPI version](https://img.shields.io/pypi/v/locus-cli.svg)](https://pypi.org/project/locus-cli/)
-
-*Stop paying for expensive API keys just to understand a codebase. Locus is a lightweight terminal tool that automatically downloads and runs architecture-optimized local LLMs to instantly map and summarize large codebases—for free, and 100% privately.*
 
 </div>
 
 ---
 
-## Why Locus?
-I wanted a tool to explore new and large codebases (like the *Linux Kernel* source code 😄), with an intuitive and powerful UI. **Locus** provides instant visual overviews and directory trees right in your terminal, helping you map out the structure before you deep dive into the code.
+## The Problem
 
-### Free, Open, Local Intelligence
-You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just to understand a codebase. **Locus dynamically profiles** your PC's hardware (Apple Silicon, NVIDIA, AMD GPU, or CPU-only) and automatically downloads and runs **architecture-optimized local LLMs**. You get instant and private folder summaries running entirely on your own machine—for free. *(Cloud APIs are still supported if you prefer them).*
+You handed your coding to AI agents. They shipped fast, tests pass, everything runs — but you no longer fully understand your own codebase. Or maybe you just inherited a large project and don't know where to begin.
 
-- **Zero-Friction:** Just do `pip install locus-cli` and run `locus`. No Docker, no manual model downloading. (Still to be packaged as of now)
-- **Fast & Native:** A fast TUI built with `Textual` and `Rich`.
-- **Private by Default:** Your proprietary code never leaves your machine unless you explicitly configure a cloud provider.
+Either way, the code works. You just don't *own* it anymore.
 
-### Current Platform Support
-- **macOS (Apple Silicon / arm64):** Supported
-- **macOS (Intel / x86_64):** Not supported yet
-- **Linux:** Supported
-- **Windows:** Supported
+## The Solution
+
+Locus is a terminal tool built specifically for this moment. It gives you a structured way to re-explore, understand, and get back in control of a codebase — whether it's yours or someone else's.
+
+It maps your project's structure, breaks down what's in it, and uses a **local LLM running entirely on your machine** to generate a plain-language overview. No cloud, no API keys, no sending your proprietary code anywhere.
+
+---
+
+## Commands
+
+```bash
+# Visual tree of the project structure
+locus tree
+
+# Static breakdown: languages, file counts, entry points, largest files
+locus info
+
+# AI-generated overview of the whole codebase (runs a local LLM)
+locus overview
+
+# Interactive line-by-line code tutor (local LLM)
+locus tutor src/main.py
+```
+
+All commands accept a `path` argument and `--ignore` flags:
+
+```bash
+locus tree /path/to/project --depth 3 --ignore build --ignore dist
+locus info /path/to/project --ignore node_modules
+locus overview /path/to/project
+```
+
+---
+
+## Local-first, private by default
+
+Locus automatically detects your hardware (Apple Silicon, NVIDIA, AMD, or CPU-only) and downloads the right model size for your machine. The model runs locally via `llama-cpp-python`. Your code never leaves your machine.
+
+No Docker. No manual setup. Just `pip install locus-cli` and run.
 
 ---
 
@@ -37,51 +65,38 @@ You shouldn't have to pay for expensive Gemini, Claude, or OpenAI API keys just 
 pip install locus-cli
 ```
 
-Or to run from source:
+Or from source:
 
 ```bash
 git clone https://github.com/Tech-Matt/locus.git
 cd locus
 python -m venv .venv
-source .venv/bin/activate  # Windows: `.venv\Scripts\activate`
+source .venv/bin/activate  # Windows: .venv\Scripts\activate
 pip install -e .
 ```
 
 ---
 
-## Usage
+## Platform support
 
-```bash
-# Show a tree of the current directory
-locus tree
-
-# Show a tree of a specific path, with custom depth and ignore rules
-locus tree /path/to/codebase --depth 3 --ignore build --ignore dist
-
-# Show a static codebase summary (languages, project type, largest files)
-locus info
-
-# Show info for a specific path, ignoring extra folders
-locus info /path/to/codebase --ignore build --ignore dist
-
-# Print version
-locus --version
-```
+| Platform | Status |
+|---|---|
+| macOS (Apple Silicon) | Supported |
+| Linux | Supported |
+| Windows | Supported |
+| macOS (Intel) | Not yet |
 
 ---
 
 ## Roadmap
 
-- [x] **Recursive tree mapping** with smart filtering and file caps
-- [x] **Hardware profiling** (Apple Silicon, NVIDIA, AMD, CPU-only detection)
-- [x] **`locus tree` CLI command** (depth, max-files, ignore flags)
-- [x] **PyPI packaging** (`pip install locus-cli`)
-- [x] **`locus info`** — static codebase snapshot (file counts, language breakdown, project type, largest files)
-- [x] **Progressive rendering** — live progress display while scanning for both `tree` and `info`
-- [x] **File type icons** — per-extension emoji in tree view with ASCII fallback for legacy terminals
-- [ ] **`locus overview`** — AI-powered codebase summary using a local LLM
-- [ ] **Local LLM inference** — auto-download and run architecture-optimized models (llama.cpp)
-- [ ] **TUI** — full interactive terminal UI
+- [x] `locus tree` — recursive directory tree with gitignore support
+- [x] `locus info` — static codebase snapshot (languages, file counts, project type, largest files)
+- [x] `locus overview` — AI-powered summary using a local LLM (auto-downloads the right model)
+- [x] Hardware profiling — Apple Silicon, NVIDIA, AMD, CPU-only detection
+- [x] Progressive rendering — live output while scanning
+- [ ] `locus ask` — ask a natural language question about the codebase
+- [x] `locus tutor` — interactive line-by-line code walkthrough with an AI tutor
 
 ---
 
