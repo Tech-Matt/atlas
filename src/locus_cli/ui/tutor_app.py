@@ -87,12 +87,14 @@ class TutorApp(App[None]):
             file_path=self._file_path,
             model_path=self._model_path,
             n_gpu_layers=self._n_gpu_layers,
-            on_summary_ready=lambda: self.call_from_thread(
-                self.post_message, SummaryReady()
-            ),
+            on_summary_ready=self._notify_summary_ready,
         )
         self._render_code()
         self._set_explanation("Analyzing file...")
+
+    def _notify_summary_ready(self) -> None:
+        """Callback for TutorSession — called from Worker A's thread."""
+        self.call_from_thread(self.post_message, SummaryReady())
 
     # ------------------------------------------------------------------ #
     # Rendering helpers
@@ -147,7 +149,7 @@ class TutorApp(App[None]):
             self._set_explanation("[dim]Generating...[/dim]")
             self._fetch_explanation(self._cursor)
 
-    def action_quit(self) -> None:
+    async def action_quit(self) -> None:
         self.exit()
 
     @work(thread=True)
