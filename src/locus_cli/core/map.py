@@ -10,54 +10,54 @@ from rich.filesize import decimal
 from rich.markup import escape
 
 # Local imports
-from ..ui.console import console, supports_unicode
+from ..ui.console import console, supports_unicode, supports_nerd_fonts
 
-# Maps file extension → emoji icon.
-# Fallback for unrecognised extensions is "📄", or ">" on non-unicode terminals.
-_EMOJI_ICONS: dict[str, str] = {
+# Maps file extension → Nerd Font DEV icon.
+# Fallback for unrecognised extensions is "\ue5ff" (folder/file generic), or ">" on non-nerdfont terminals.
+_NERD_ICONS: dict[str, str] = {
     # Python
-    ".py": "🐍", ".pyw": "🐍", ".pyi": "🐍",
+    ".py": "\ue73c", ".pyw": "\ue73c", ".pyi": "\ue73c",
     # JavaScript / TypeScript
-    ".js": "⚡", ".mjs": "⚡", ".cjs": "⚡", ".jsx": "⚡",
-    ".ts": "⚡", ".tsx": "⚡",
+    ".js": "\ue781", ".mjs": "\ue781", ".cjs": "\ue781", ".jsx": "\ue781",
+    ".ts": "\ue628", ".tsx": "\ue628",
     # Systems
-    ".rs": "🦀",
-    ".go": "🐹",
-    ".c": "🔧", ".h": "🔧", ".cpp": "🔧", ".cc": "🔧", ".cxx": "🔧", ".hpp": "🔧",
-    ".zig": "⚡",
+    ".rs": "\ue7a8",
+    ".go": "\ue627",
+    ".c": "\ue61e", ".h": "\ue64b", ".cpp": "\ue61d", ".cc": "\ue61d", ".cxx": "\ue61d", ".hpp": "\ue64b",
+    ".zig": "\ue209",
     # JVM
-    ".java": "☕", ".kt": "☕", ".kts": "☕", ".scala": "☕",
+    ".java": "\ue256", ".kt": "\ue634", ".kts": "\ue634", ".scala": "\ue737",
     # Scripting
-    ".rb": "💎",
-    ".lua": "🌙",
-    ".sh": "💻", ".bash": "💻", ".zsh": "💻", ".fish": "💻",
+    ".rb": "\ue21e",
+    ".lua": "\ue620",
+    ".sh": "\ue795", ".bash": "\ue795", ".zsh": "\ue795", ".fish": "\ue795",
     # Web / styles
-    ".html": "🌐", ".htm": "🌐",
-    ".css": "🎨", ".scss": "🎨", ".sass": "🎨", ".less": "🎨",
-    ".svelte": "🌐", ".vue": "🌐",
+    ".html": "\ue736", ".htm": "\ue736",
+    ".css": "\ue749", ".scss": "\ue749", ".sass": "\ue749", ".less": "\ue749",
+    ".svelte": "\ue28d", ".vue": "\ue2a1",
     # Data / config
-    ".json": "📋", ".yaml": "📋", ".yml": "📋", ".toml": "📋", ".xml": "📋",
-    ".env": "🔑",
-    ".lock": "🔒",
+    ".json": "\ue60b", ".yaml": "\ue6a8", ".yml": "\ue6a8", ".toml": "\ue6b2", ".xml": "\ue7c3",
+    ".env": "\uf023",
+    ".lock": "\uf023",
     # Docs
-    ".md": "📝", ".mdx": "📝", ".txt": "📝", ".rst": "📝",
+    ".md": "\ue609", ".mdx": "\ue609", ".txt": "\uf15c", ".rst": "\uf15c",
     # Data science
-    ".ipynb": "📓",
-    ".r": "📊", ".jl": "📊",
+    ".ipynb": "\ue606",
+    ".r": "\ue6a8", ".jl": "\ue624",
     # Mobile
-    ".swift": "🍎",
-    ".dart": "🎯",
+    ".swift": "\ue755",
+    ".dart": "\ue2af",
     # Database
-    ".sql": "🗄",
+    ".sql": "\uf1c6",
     # Archives
-    ".zip": "📦", ".tar": "📦", ".gz": "📦", ".rar": "📦", ".7z": "📦",
+    ".zip": "\uf1c6", ".tar": "\uf1c6", ".gz": "\uf1c6", ".rar": "\uf1c6", ".7z": "\uf1c6",
     # Media
-    ".png": "🖼", ".jpg": "🖼", ".jpeg": "🖼", ".gif": "🖼",
-    ".svg": "🖼", ".webp": "🖼",
-    ".mp4": "🎬", ".mov": "🎬", ".avi": "🎬",
-    ".mp3": "🎵", ".wav": "🎵", ".flac": "🎵",
+    ".png": "\uf1c5", ".jpg": "\uf1c5", ".jpeg": "\uf1c5", ".gif": "\uf1c5",
+    ".svg": "\uf1c5", ".webp": "\uf1c5",
+    ".mp4": "\uf03d", ".mov": "\uf03d", ".avi": "\uf03d",
+    ".mp3": "\uf001", ".wav": "\uf001", ".flac": "\uf001",
     # Documents
-    ".pdf": "📕",
+    ".pdf": "\uf1c1",
 }
 
 class LocusMap:
@@ -149,7 +149,8 @@ class LocusMap:
                 files.append(entry)
 
         for entry in directories:
-            branch = tree_node.add(f"[bold green]{escape(entry.name)}[/]")
+            folder_icon = "\uf07b " if supports_nerd_fonts() else ""
+            branch = tree_node.add(f"{folder_icon}[bold green]{escape(entry.name)}[/]")
             if current_depth < self.max_depth - 1:
                 self._walk(entry.path, branch, current_depth + 1, on_progress)
 
@@ -161,12 +162,15 @@ class LocusMap:
                 file_size = decimal(entry.stat().st_size)
             except OSError:
                 file_size = "?"
-            if supports_unicode():
+            if supports_nerd_fonts():
                 ext = Path(entry.name).suffix.lower()
-                icon = _EMOJI_ICONS.get(ext, "📄")
+                icon = _NERD_ICONS.get(ext, "\uf15b") # default file icon
             else:
-                icon = ">"
-            tree_node.add(f"{icon} {escape(entry.name)} ([dim]{file_size}[/])")
+                icon = "" 
+            
+            # If icon is empty, we just don't add the space before it
+            prefix = f"{icon} " if icon else ""
+            tree_node.add(f"{prefix}{escape(entry.name)} ([dim]{file_size}[/])")
             files_shown += 1
 
         remaining_files = len(files) - files_shown
