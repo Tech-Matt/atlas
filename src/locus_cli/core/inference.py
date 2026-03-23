@@ -44,13 +44,20 @@ def warn_if_gpu_unsupported(gpu_type: str, n_gpu_layers: int) -> None:
     if check_gpu_support():
         return
     from ..ui.console import console
-    hint_nvidia = _GPU_INSTALL_HINTS.get("NVIDIA", "")
-    hint_amd = _GPU_INSTALL_HINTS.get("AMD", "")
+    gpu = gpu_type.upper()
+    if gpu == "NVIDIA":
+        hint = f"  NVIDIA: {_GPU_INSTALL_HINTS.get('NVIDIA', '')}"
+    elif gpu == "AMD":
+        hint = f"  AMD:    {_GPU_INSTALL_HINTS.get('AMD', '')}"
+    else:
+        hint = (
+            f"  NVIDIA: {_GPU_INSTALL_HINTS.get('NVIDIA', '')}\n"
+            f"  AMD:    {_GPU_INSTALL_HINTS.get('AMD', '')}"
+        )
     console.print(
         "\n[yellow]Warning: llama-cpp-python was not compiled with GPU support.\n"
-        "Inference will run on CPU. To enable GPU acceleration:\n\n"
-        f"  NVIDIA: {hint_nvidia}\n"
-        f"  AMD:    {hint_amd}[/yellow]\n"
+        f"Inference will run on CPU. To enable GPU acceleration:\n\n"
+        f"{hint}[/yellow]\n"
     )
 
 
