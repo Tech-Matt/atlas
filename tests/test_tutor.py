@@ -94,7 +94,7 @@ def test_build_line_prompt_contains_line_number(tmp_path: Path) -> None:
     session = _make_session(tmp_path)
     session.file_summary = "summary"
     prompt = session.build_line_prompt(line_num=2)
-    assert "2" in prompt
+    assert "line 2" in prompt
 
 
 def test_build_line_prompt_marks_current_line(tmp_path: Path) -> None:
