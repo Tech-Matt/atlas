@@ -12,3 +12,5 @@ dist/
 *.egg-info/
 # Agents
 .github/copilot-instructions.md
+# Superpowers Claude Plugin
+.superpowers/
