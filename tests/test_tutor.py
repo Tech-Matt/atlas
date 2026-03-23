@@ -186,3 +186,70 @@ def test_summary_ready_event_is_set_after_worker_a(tmp_path: Path) -> None:
     session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
     session._run_worker_a(llm_fn=lambda p: "summary", on_done=lambda: None)
     assert session._summary_ready.is_set()
+
+
+# ---------------------------------------------------------------------------
+# TutorSession — Worker B (prefetch queue)
+# ---------------------------------------------------------------------------
+
+def test_worker_b_populates_cache(tmp_path: Path) -> None:
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "b.py"
+    src.write_text("a = 1\nb = 2\nc = 3\n")
+
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+    session.file_summary = "summary"
+    session._cursor_line = 1
+
+    session._run_worker_b(
+        start_line=1,
+        llm_fn=lambda p: "explanation",
+        stop_event=threading.Event(),
+    )
+
+    # All three lines should be cached
+    assert session.get_explanation(1) == "explanation"
+    assert session.get_explanation(2) == "explanation"
+    assert session.get_explanation(3) == "explanation"
+
+
+def test_worker_b_skips_already_cached_lines(tmp_path: Path) -> None:
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "b.py"
+    src.write_text("a = 1\nb = 2\n")
+
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+    session.file_summary = "summary"
+    session.line_cache[1] = "pre-cached"
+    session._cursor_line = 1
+
+    call_count = {"n": 0}
+    def counting_llm(p: str) -> str:
+        call_count["n"] += 1
+        return "new"
+
+    session._run_worker_b(
+        start_line=1,
+        llm_fn=counting_llm,
+        stop_event=threading.Event(),
+    )
+    # Line 1 was already cached; only line 2 should trigger LLM
+    assert call_count["n"] == 1
+    assert session.get_explanation(1) == "pre-cached"
+
+
+def test_worker_b_respects_stop_event(tmp_path: Path) -> None:
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "b.py"
+    src.write_text("\n".join(f"x = {i}" for i in range(50)) + "\n")
+
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+    session.file_summary = "summary"
+    session._cursor_line = 1
+
+    stop = threading.Event()
+    stop.set()  # pre-set: worker should exit immediately
+
+    session._run_worker_b(start_line=1, llm_fn=lambda p: "x", stop_event=stop)
+    # Cache should be empty or at most 1 entry — worker exited early
+    assert len(session.line_cache) <= 1

@@ -8,6 +8,7 @@ Workers run as threading.Thread instances (not Textual @work).
 from __future__ import annotations
 
 import threading
+import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -134,6 +135,45 @@ class TutorSession:
         if self._on_summary_ready_cb:
             self._on_summary_ready_cb()
         self._start_worker_b()
+
+    # ------------------------------------------------------------------ #
+    # Worker B — prefetch queue (runs in background thread)
+    # ------------------------------------------------------------------ #
+
+    _PREFETCH_AHEAD = 20  # pause when cached_line > cursor_line + this
+
+    def _start_worker_b(self) -> None:
+        """Start Worker B from the current cursor position."""
+        self._worker_b_stop = threading.Event()
+        t = threading.Thread(
+            target=self._run_worker_b,
+            kwargs={
+                "start_line": self._cursor_line,
+                "llm_fn": self._call_llm,
+                "stop_event": self._worker_b_stop,
+            },
+            daemon=True,
+        )
+        t.start()
+
+    def _run_worker_b(
+        self,
+        start_line: int,
+        llm_fn: Callable[[str], str],
+        stop_event: threading.Event,
+    ) -> None:
+        """Prefetch explanations from start_line to end of file."""
+        for line_num in range(start_line, len(self.lines) + 1):
+            if stop_event.is_set():
+                return
+            # Pause if too far ahead of cursor
+            while line_num > self._cursor_line + self._PREFETCH_AHEAD:
+                if stop_event.is_set():
+                    return
+                time.sleep(0.1)
+            if line_num not in self.line_cache:
+                explanation = llm_fn(self.build_line_prompt(line_num))
+                self.line_cache[line_num] = explanation
 
     # ------------------------------------------------------------------ #
     # Prompt builders
