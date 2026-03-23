@@ -119,18 +119,20 @@ def cmd_tutor(args: argparse.Namespace) -> int:
         return 1
 
     # Hardware profiling + tier selection
-    profiler = HardwareProfiler()
-    gpu_info = profiler.detect_gpu()
-    ram_gb = profiler.get_total_ram_gb()
-    provisioner = Provisioner()
-    tier = provisioner.determine_tier(
-        ram_gb=ram_gb,
-        gpu_type=str(gpu_info.get("type", "CPU_ONLY")),
-        vram_gb=float(gpu_info.get("vram_gb", 0.0)),
-    )
+    with console.status("[dim]Profiling hardware...[/dim]", spinner="dots"):
+        profiler = HardwareProfiler()
+        gpu_info = profiler.detect_gpu()
+        ram_gb = profiler.get_total_ram_gb()
+        provisioner = Provisioner()
+        tier = provisioner.determine_tier(
+            ram_gb=ram_gb,
+            gpu_type=str(gpu_info.get("type", "CPU_ONLY")),
+            vram_gb=float(gpu_info.get("vram_gb", 0.0)),
+        )
 
     # Auto-select n_gpu_layers (no user prompt)
-    n_gpu_layers = -1 if check_gpu_support() else 0
+    with console.status("[dim]Initializing AI backend...[/dim]", spinner="dots"):
+        n_gpu_layers = -1 if check_gpu_support() else 0
 
     # Model download advisory + download if needed
     _MODEL_SIZES = {1: "4.7 GB", 2: "2.0 GB", 3: "1.0 GB", 4: "0.4 GB"}

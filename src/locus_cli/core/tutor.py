@@ -52,6 +52,7 @@ class TutorSession:
         self.line_cache: dict[int, str] = {}
         self._cursor_line: int = 1
         self._summary_ready = threading.Event()
+        self._llm_lock = threading.Lock()
 
         if not _skip_workers:
             self._start_worker_a()
@@ -222,25 +223,43 @@ class TutorSession:
     def _get_llm(self):
         """Return the shared Llama instance, loading it once on first call."""
         if not hasattr(self, "_llm_instance") or self._llm_instance is None:
+            import os
             from llama_cpp import Llama  # type: ignore[import]
-            self._llm_instance = Llama(
-                model_path=str(self.model_path),
-                n_gpu_layers=self.n_gpu_layers,
-                n_ctx=8192,
-                verbose=False,
-                chat_format="chatml",
-            )
+            
+            # Suppress C-level stderr logging (fd 2) that circumvents Textual 
+            # and breaks the TUI rendering and terminal state.
+            try:
+                old_stderr = os.dup(2)
+                devnull = os.open(os.devnull, os.O_WRONLY)
+                os.dup2(devnull, 2)
+            except Exception:
+                old_stderr = None
+                
+            try:
+                self._llm_instance = Llama(
+                    model_path=str(self.model_path),
+                    n_gpu_layers=self.n_gpu_layers,
+                    n_ctx=8192,
+                    verbose=False,
+                    chat_format="chatml",
+                )
+            finally:
+                if old_stderr is not None:
+                    os.dup2(old_stderr, 2)
+                    os.close(old_stderr)
+                    os.close(devnull)
         return self._llm_instance
 
     def _call_llm(self, prompt: str) -> str:
         """Call the local LLM with a single prompt and return the full response."""
-        llm = self._get_llm()
-        result = llm.create_chat_completion(
-            messages=[{"role": "user", "content": prompt}],
-            max_tokens=300,
-            temperature=0.3,
-        )
-        return result["choices"][0]["message"]["content"].strip()
+        with self._llm_lock:
+            llm = self._get_llm()
+            result = llm.create_chat_completion(
+                messages=[{"role": "user", "content": prompt}],
+                max_tokens=300,
+                temperature=0.3,
+            )
+            return result["choices"][0]["message"]["content"].strip()
 
     def build_line_prompt(self, line_num: int) -> str:
         # line_num is 1-indexed
