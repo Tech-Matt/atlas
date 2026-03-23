@@ -100,6 +100,71 @@ def cmd_overview(args: argparse.Namespace) -> int:
     console.rule()
     return 0
 
+
+def cmd_tutor(args: argparse.Namespace) -> int:
+    """ Handler for: `locus tutor` """
+    from .core.tutor import TutorSession
+    from .core.profiler import HardwareProfiler
+    from .core.provisioner import Provisioner
+    from .core.inference import check_gpu_support
+    from rich.progress import Progress, BarColumn, DownloadColumn, TransferSpeedColumn
+
+    file_path = Path(args.file).expanduser().resolve()
+
+    # Validate file before provisioning (fast fail)
+    try:
+        TutorSession(file_path, n_gpu_layers=0, _skip_workers=True)
+    except ValueError as exc:
+        console.print(f"[red]Error:[/red] {exc}")
+        return 1
+
+    # Hardware profiling + tier selection
+    profiler = HardwareProfiler()
+    gpu_info = profiler.detect_gpu()
+    ram_gb = profiler.get_total_ram_gb()
+    provisioner = Provisioner()
+    tier = provisioner.determine_tier(
+        ram_gb=ram_gb,
+        gpu_type=str(gpu_info.get("type", "CPU_ONLY")),
+        vram_gb=float(gpu_info.get("vram_gb", 0.0)),
+    )
+
+    # Auto-select n_gpu_layers (no user prompt)
+    n_gpu_layers = -1 if check_gpu_support() else 0
+
+    # Model download advisory + download if needed
+    _MODEL_SIZES = {1: "4.7 GB", 2: "2.0 GB", 3: "1.0 GB", 4: "0.4 GB"}
+    if not provisioner.is_model_cached(tier):
+        model_name, _ = provisioner.MODELS[tier]
+        model_size = _MODEL_SIZES.get(tier, "several GB")
+        console.print(
+            f"\n[bold]Model required:[/bold] {model_name}  (~{model_size})\n"
+            f"[dim]Saved to: ~/.locus/models/{model_name}[/dim]\n"
+            f"[yellow]This download may be slow depending on your connection speed.[/yellow]\n"
+        )
+        with Progress(
+            "[dim]{task.description}[/dim]",
+            BarColumn(),
+            DownloadColumn(),
+            TransferSpeedColumn(),
+            console=console,
+        ) as progress:
+            task_id = progress.add_task(f"Downloading {model_name}", total=None)
+            def _on_dl(downloaded: int, total: int) -> None:
+                progress.update(task_id, completed=downloaded, total=total if total > 0 else None)
+            provisioner.download_model(tier, on_progress=_on_dl)
+
+    # Launch TUI
+    from .ui.tutor_app import TutorApp
+    app = TutorApp(
+        file_path=file_path,
+        model_path=provisioner.get_model_path(tier),
+        n_gpu_layers=n_gpu_layers,
+    )
+    app.run()
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="locus",
@@ -147,6 +212,11 @@ def build_parser() -> argparse.ArgumentParser:
         help="Ignore files / folders (repeatable)."
     )
     overview_parser.set_defaults(handler=cmd_overview)
+
+    # ---- tutor command ----
+    tutor_parser = subparser.add_parser("tutor", help="Line-by-line AI code tutor.")
+    tutor_parser.add_argument("file", help="File to tutor.")
+    tutor_parser.set_defaults(handler=cmd_tutor)
 
     return parser
 

@@ -253,3 +253,29 @@ def test_worker_b_respects_stop_event(tmp_path: Path) -> None:
     session._run_worker_b(start_line=1, llm_fn=lambda p: "x", stop_event=stop)
     # Cache should be empty or at most 1 entry — worker exited early
     assert len(session.line_cache) <= 1
+
+
+# ---------------------------------------------------------------------------
+# cmd_tutor — CLI validation (no LLM, no TUI)
+# ---------------------------------------------------------------------------
+
+def test_tutor_cli_rejects_missing_file(tmp_path: Path) -> None:
+    from locus_cli.main import main
+    result = main(["tutor", str(tmp_path / "missing.py")])
+    assert result != 0
+
+
+def test_tutor_cli_rejects_binary_file(tmp_path: Path) -> None:
+    from locus_cli.main import main
+    binary = tmp_path / "img.png"
+    binary.write_bytes(b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR")
+    result = main(["tutor", str(binary)])
+    assert result != 0
+
+
+def test_tutor_cli_rejects_oversized_file(tmp_path: Path) -> None:
+    from locus_cli.main import main
+    big = tmp_path / "big.py"
+    big.write_text("\n".join(f"x = {i}" for i in range(501)))
+    result = main(["tutor", str(big)])
+    assert result != 0
