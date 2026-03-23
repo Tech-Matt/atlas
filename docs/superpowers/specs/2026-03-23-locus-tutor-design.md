@@ -86,7 +86,7 @@ Jumping to top/bottom of file (`gg`/`G`) is out of scope for v0.1.0.
 | `SHOWING` | Explanation available (cached or just generated) | The explanation text |
 | `READY` | User navigates to a new line after viewing an explanation | `Press Enter or Space to explain the current line.` |
 
-Moving the cursor always resets the panel to `READY` (clearing the previous explanation). This ensures the right panel always reflects the current line.
+**Cursor movement always resets the panel to `READY` regardless of the current state** — including during `ANALYZING`, `GENERATING`, or `SHOWING`. This is the single rule that governs all cursor-triggered transitions. The table above only shows the most common paths; the `READY` reset on move applies universally.
 
 ---
 
@@ -98,7 +98,7 @@ Moving the cursor always resets the panel to `READY` (clearing the previous expl
 
 **Phase 2 — Worker A (file summary):** A `threading.Thread` started by `TutorSession.__init__` feeds the full file content to the LLM and generates a structured summary (~150–250 words). When complete, the thread stores the summary in `TutorSession.file_summary` and calls `TutorSession._on_summary_ready()`, which sets an internal `threading.Event` (`_summary_ready`) and notifies `TutorApp` via a Textual `Message` posted with `app.call_from_thread(app.post_message, SummaryReady())`. `TutorApp` handles `SummaryReady` to update the right panel to `READY` state and enable the reveal hint in the footer.
 
-**Phase 3 — Worker B (prefetch queue):** Started inside `TutorSession._on_summary_ready()` immediately after the summary is stored. Iterates lines sequentially from line 1, calling `_generate_explanation(line_num)` for each uncached line and storing results in `line_cache`. The worker pauses (via `time.sleep(0.1)` poll) whenever `cached_line > cursor_line + 20`, resuming when the gap closes. This prevents wasting compute on lines the user may never reach.
+**Phase 3 — Worker B (prefetch queue):** Started inside `TutorSession._on_summary_ready()` immediately after the summary is stored. Iterates lines sequentially starting from `cursor_line` at the moment Worker B begins (not always line 1 — the user may have navigated while Worker A was running). Calls `_generate_explanation(line_num)` for each uncached line and stores results in `line_cache`. The worker pauses (via `time.sleep(0.1)` poll) whenever `cached_line > cursor_line + 20`, resuming when the gap closes. This prevents wasting compute on lines the user may never reach. Lines before the starting cursor position are never prefetched — navigating backwards on a cache miss generates on demand.
 
 ---
 
@@ -187,6 +187,7 @@ Explain this line in plain language. If the line is part of a larger logical blo
 - On cursor move: calls `session.set_cursor(new_line)` and resets right panel to `READY`
 
 **`cmd_tutor` (`main.py`)**
+- Receives the file path as `args.file` (a dedicated argument, not the shared `args.path` used by other commands). The implementer must apply `Path(args.file).expanduser().resolve()` normalization explicitly — the shared path normalization block in `main()` does not cover this argument.
 - Validates file path exists, is readable, and is UTF-8 decodable (rejects binary files with a clear error)
 - Validates file is within size limits (≤500 lines, ≤20 KB)
 - Runs provisioning (same flow as `cmd_overview`, including download advisory)
