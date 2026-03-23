@@ -35,6 +35,7 @@ class TutorApp(App[None]):
 
     #code-panel {
         width: 1fr;
+        height: 1fr;
         border-right: solid $primary-darken-2;
         overflow-y: auto;
         padding: 0 1;
@@ -42,6 +43,7 @@ class TutorApp(App[None]):
 
     #explanation-panel {
         width: 1fr;
+        height: 1fr;
         overflow-y: auto;
         padding: 1 2;
         color: $text;
