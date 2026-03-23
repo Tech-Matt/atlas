@@ -13,6 +13,20 @@
 
 ---
 
+## General Policies
+
+### Model Download Advisory
+
+Wherever `locus` downloads a model (any command, not just `tutor`), the user must be shown a clear advisory **before** the download begins, containing:
+- The model name and its file size
+- A warning that the download may be slow depending on connection speed
+- The exact local path where the file will be saved (`~/.locus/models/`)
+- A confirmation prompt (or clear indication that the download is starting)
+
+This advisory must appear in all commands that trigger a model download: `overview`, `tutor`, and any future commands that use local LLMs.
+
+---
+
 ## User Experience
 
 ### Invocation
@@ -21,7 +35,13 @@
 locus tutor src/locus_cli/core/scanner.py
 ```
 
-The TUI opens immediately. The file is rendered in the left panel. The cursor starts on line 1.
+### Pre-TUI: Provisioning
+
+Before the TUI opens, `cmd_tutor` runs the same provisioning flow as `cmd_overview`: hardware detection, tier selection, and model download if not already cached. This happens in the terminal (not inside the TUI), identical to the `overview` flow — including the download advisory described above. The TUI only opens once a model is confirmed available.
+
+### TUI Opens Instantly
+
+Once provisioning is complete, the TUI opens immediately — the file is rendered and the cursor sits on line 1 with no further waiting required.
 
 ### Layout — Side-by-side split
 
@@ -30,7 +50,7 @@ The TUI opens immediately. The file is rendered in the left panel. The cursor st
 │  src/locus_cli/core/     │  EXPLANATION                 │
 │  scanner.py              │                              │
 │                          │  Analyzing file...           │
-│    1  import os          │  (ready once summary loads)  │
+│    1  import os          │                              │
 │    2  import sys         │                              │
 │  ▶ 3  def main():        │                              │
 │    4      args = parse() │                              │
@@ -42,8 +62,8 @@ The TUI opens immediately. The file is rendered in the left panel. The cursor st
 ```
 
 - **Left panel:** read-only code viewer with line numbers. Current line is highlighted. Scrolls to follow the cursor.
-- **Right panel:** read-only explanation panel. Shows `Analyzing file...` during startup. Updates when the user reveals an explanation.
-- **Footer:** persistent key binding hint.
+- **Right panel:** read-only explanation panel. Content changes based on session state (see Right Panel State Machine below).
+- **Footer:** persistent key binding hint. The "reveal" hint is dimmed while `Analyzing file...` is active.
 
 ### Navigation & Interaction
 
@@ -54,26 +74,42 @@ The TUI opens immediately. The file is rendered in the left panel. The cursor st
 | `Enter` / `Space` | Reveal explanation for current line |
 | `q` | Quit |
 
+Jumping to top/bottom of file (`gg`/`G`) is out of scope for v0.1.0.
+
+### Right Panel State Machine
+
+| State | Trigger | Right panel content |
+|-------|---------|---------------------|
+| `ANALYZING` | TUI opens | `Analyzing file...` |
+| `READY` | Worker A completes | `Press Enter or Space to explain the current line.` |
+| `GENERATING` | User presses Enter/Space on a cache miss | `Generating...` |
+| `SHOWING` | Explanation available (cached or just generated) | The explanation text |
+| `READY` | User navigates to a new line after viewing an explanation | `Press Enter or Space to explain the current line.` |
+
+Moving the cursor always resets the panel to `READY` (clearing the previous explanation). This ensures the right panel always reflects the current line.
+
 ---
 
 ## Startup Sequence
 
-The TUI opens instantly — no waiting before the file is displayed.
+**Phase 0 (terminal, before TUI):** Provisioning — hardware profiling, model tier selection, model download if needed (with download advisory). Identical to `locus overview`.
 
-**Background Worker A — File Summary**
-Immediately after the TUI opens, a `@work(thread=True)` Textual worker feeds the full file content to the local LLM and requests a structured summary. This summary covers:
-- What the file does overall
-- Its key components (main classes, functions, and their roles)
-- Any important patterns or design decisions a reader should know upfront
+**Phase 1 (TUI open):** File rendered instantly. Right panel shows `Analyzing file...`. Footer "reveal" hint dimmed.
 
-Target length: ~150–250 words. Stored in session memory for the duration of the session.
+**Phase 2 — Worker A (file summary):** A `threading.Thread` started by `TutorSession.__init__` feeds the full file content to the LLM and generates a structured summary (~150–250 words). When complete, the thread stores the summary in `TutorSession.file_summary` and calls `TutorSession._on_summary_ready()`, which sets an internal `threading.Event` (`_summary_ready`) and notifies `TutorApp` via a Textual `Message` posted with `app.call_from_thread(app.post_message, SummaryReady())`. `TutorApp` handles `SummaryReady` to update the right panel to `READY` state and enable the reveal hint in the footer.
 
-The right panel shows `Analyzing file...` until the summary is ready. Once it arrives, the panel transitions to `Press Enter or Space to explain the current line.`
+**Phase 3 — Worker B (prefetch queue):** Started inside `TutorSession._on_summary_ready()` immediately after the summary is stored. Iterates lines sequentially from line 1, calling `_generate_explanation(line_num)` for each uncached line and storing results in `line_cache`. The worker pauses (via `time.sleep(0.1)` poll) whenever `cached_line > cursor_line + 20`, resuming when the gap closes. This prevents wasting compute on lines the user may never reach.
 
-**Background Worker B — Prefetch Queue**
-Starts immediately after Worker A completes. Generates explanations for each line sequentially, storing results in `line_cache: dict[int, str]`. The worker runs continuously through the file.
+---
 
-Because the user spends several seconds reading each explanation, Worker B stays ahead of the cursor in normal linear reading. On a cache miss (user jumps ahead), the explanation is generated on demand.
+## Context Window
+
+The per-line explanation prompt sends the full file content on every call. To avoid exceeding the model's context window:
+
+- **Maximum file size:** `locus tutor` refuses files larger than **500 lines or 20 KB** (whichever is hit first). `cmd_tutor` checks this before provisioning and prints a clear error if exceeded.
+- **Context size:** `TutorSession` initialises the llama-cpp model with `n_ctx=8192` (doubled from the `overview` default of 4096) to accommodate the file summary + full file content in a single prompt.
+
+These limits cover the vast majority of single-responsibility source files. Multi-file or large-file tutoring is out of scope for v0.1.0.
 
 ---
 
@@ -89,7 +125,7 @@ Cover:
 2. Its key components — list the main classes and functions with a one-line description of each
 3. Any important patterns, conventions, or design decisions a reader should know before diving in
 
-Be concise but thorough. Target ~200 words.
+Be concise but thorough. Target 150–250 words.
 
 FILE: {filename}
 ---
@@ -123,7 +159,7 @@ Explain this line in plain language. If the line is part of a larger logical blo
 
 | File | Purpose |
 |------|---------|
-| `src/locus_cli/ui/tutor_app.py` | Textual TUI — layout, key bindings, widget updates |
+| `src/locus_cli/ui/tutor_app.py` | Textual TUI — layout, key bindings, widget updates, message handlers |
 | `src/locus_cli/core/tutor.py` | Session logic — file loading, summary generation, prefetch queue, `line_cache` |
 
 ### Changes to Existing Files
@@ -134,31 +170,40 @@ Explain this line in plain language. If the line is part of a larger logical blo
 
 ### Key Components
 
+**`TutorSession` (`core/tutor.py`)**
+- Loads and validates the file from disk
+- Owns `line_cache: dict[int, str]` and `file_summary: str | None`
+- Runs Worker A and Worker B as `threading.Thread` instances (not Textual workers — `TutorSession` is a plain class)
+- Exposes:
+  - `get_explanation(line_num) -> str | None` — returns cached result or `None`
+  - `request_explanation(line_num) -> str` — generates explanation immediately (blocking), caches and returns result. Called by `TutorApp` on a cache miss inside a Textual `@work(thread=True)` worker so the UI thread is never blocked.
+  - `set_cursor(line_num)` — updates internal cursor position so Worker B knows when to resume prefetching
+
 **`TutorApp` (Textual app, `ui/tutor_app.py`)**
 - Renders the side-by-side split layout
 - Handles keyboard events (`j`, `k`, `↑`, `↓`, `Enter`, `Space`, `q`)
-- Calls into `TutorSession` for explanations
-- Updates the right panel reactively
-
-**`TutorSession` (`core/tutor.py`)**
-- Loads the file from disk
-- Owns `line_cache: dict[int, str]`
-- Exposes `get_explanation(line_num) -> str | None` — returns cached result or `None` if not yet ready
-- Runs Worker A (summary) and Worker B (prefetch) as background threads
-- Prefetch worker iterates lines sequentially, skips already-cached lines, pauses if it gets too far ahead of the cursor (to avoid wasting compute on lines the user may never reach)
+- Listens for `SummaryReady` message from `TutorSession` to transition from `ANALYZING` → `READY`
+- On Enter/Space: checks `session.get_explanation(cursor)`. If cached, displays immediately. If `None`, transitions to `GENERATING` and dispatches a Textual `@work(thread=True)` worker that calls `session.request_explanation(cursor)`, then posts a result message to update the panel.
+- On cursor move: calls `session.set_cursor(new_line)` and resets right panel to `READY`
 
 **`cmd_tutor` (`main.py`)**
-- Validates the file path exists and is readable
+- Validates file path exists, is readable, and is UTF-8 decodable (rejects binary files with a clear error)
+- Validates file is within size limits (≤500 lines, ≤20 KB)
+- Runs provisioning (same flow as `cmd_overview`, including download advisory)
 - Instantiates and runs `TutorApp`
 
 ---
 
 ## Error Handling
 
-- **File not found:** print error and exit before launching TUI
-- **Unsupported file type:** no restriction — tutor works on any text file
-- **LLM not available / model not downloaded:** surface the same provisioning flow as `locus overview` (model download prompt before TUI opens)
-- **Cache miss on explanation reveal:** show a brief `Generating...` indicator in the right panel, generate on demand, update when done
+| Situation | Behaviour |
+|-----------|-----------|
+| File not found | Print error, exit before provisioning |
+| File is binary (not UTF-8) | Print error, exit before provisioning |
+| File exceeds size limit | Print error (with actual line/byte count), exit before provisioning |
+| Model not downloaded | Surface provisioning/download flow with advisory (same as `overview`) |
+| Cache miss on reveal | Transition to `GENERATING`, generate on demand via `@work` worker, update panel when done |
+| LLM error during generation | Show `Could not generate explanation. Press Enter to retry.` in right panel |
 
 ---
 
@@ -167,4 +212,6 @@ Explain this line in plain language. If the line is part of a larger logical blo
 - Follow-up questions / interactive chat (planned for a future version)
 - Multi-file context (tutor operates on a single file)
 - Cloud LLM providers (local only, same as `overview`)
-- Syntax highlighting in the code viewer (nice-to-have, not required)
+- Syntax highlighting in the code viewer
+- Jump-to-top / jump-to-bottom shortcuts
+- Files larger than 500 lines or 20 KB
