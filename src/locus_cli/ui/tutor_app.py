@@ -8,7 +8,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from textual.app import App, ComposeResult, Message
+from textual.app import App, ComposeResult
+from textual.message import Message
 from textual.containers import Horizontal
 from textual.widgets import Footer, Static
 from textual import work
