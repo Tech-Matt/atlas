@@ -37,6 +37,23 @@ def gpu_install_hint(gpu_type: str) -> str | None:
     return _GPU_INSTALL_HINTS.get(gpu_type.upper())
 
 
+def warn_if_gpu_unsupported(gpu_type: str, n_gpu_layers: int) -> None:
+    """Print a warning to console if GPU was requested but is not supported."""
+    if n_gpu_layers != -1:
+        return
+    if check_gpu_support():
+        return
+    from ..ui.console import console
+    hint_nvidia = _GPU_INSTALL_HINTS.get("NVIDIA", "")
+    hint_amd = _GPU_INSTALL_HINTS.get("AMD", "")
+    console.print(
+        "\n[yellow]Warning: llama-cpp-python was not compiled with GPU support.\n"
+        "Inference will run on CPU. To enable GPU acceleration:\n\n"
+        f"  NVIDIA: {hint_nvidia}\n"
+        f"  AMD:    {hint_amd}[/yellow]\n"
+    )
+
+
 def check_gpu_support() -> bool:
     """Return True if llama-cpp-python was compiled with GPU offload support."""
     try:
@@ -100,7 +117,7 @@ def stream_overview(
     llm = Llama(
         model_path=str(model_path),
         n_gpu_layers=n_gpu_layers,
-        n_ctx=4096,
+        n_ctx=8192,
         verbose=False,
         chat_format="chatml",
     )
