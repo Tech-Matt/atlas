@@ -1,11 +1,10 @@
 """
-Textual TUI for `locus overview` — setup screen only.
+Textual TUI for GPU/CPU setup screen — shared by `locus overview` and `locus tutor`.
 
 Shows detected hardware and asks the user whether to run on GPU or CPU.
 Returns n_gpu_layers (-1 = full GPU offload, 0 = CPU) via app.run().
 
-After the app exits, the caller (cmd_overview) handles model download and
-streams inference output directly to the terminal.
+After the app exits, the caller handles model download and inference.
 """
 from __future__ import annotations
 
@@ -16,11 +15,11 @@ from textual.widgets import Button, Static
 from ..core.provisioner import Provisioner
 
 
-class OverviewApp(App[int]):
+class SetupApp(App[int]):
     """Setup screen: display hardware info and collect GPU/CPU preference."""
 
     CSS = """
-    OverviewApp {
+    SetupApp {
         background: $surface;
         align: center middle;
     }
@@ -61,11 +60,13 @@ class OverviewApp(App[int]):
 
     def __init__(
         self,
+        title: str,
         tier: int,
         provisioner: Provisioner,
         gpu_info: dict,
     ) -> None:
         super().__init__()
+        self._title = title
         self.tier = tier
         self.provisioner = provisioner
         self.gpu_info = gpu_info
@@ -89,6 +90,9 @@ class OverviewApp(App[int]):
                 yield Button("CPU  [C]", id="btn-cpu", variant="default")
 
     def on_mount(self) -> None:
+        # Set panel border title
+        self.query_one("#panel", Vertical).border_title = self._title
+
         vram: float = float(self.gpu_info.get("vram_gb", 0.0))
         model_name, _ = self.provisioner.MODELS[self.tier]
         cached = self.provisioner.is_model_cached(self.tier)
@@ -113,7 +117,6 @@ class OverviewApp(App[int]):
         controls = self.query_one("#controls", Horizontal)
 
         if not self._has_gpu:
-            # No GPU hardware detected — CPU only, no choice needed
             note.display = False
             controls.display = False
             status.update(
@@ -121,9 +124,6 @@ class OverviewApp(App[int]):
                 "Press [bold]Enter[/bold] to continue.[/dim]"
             )
         elif not self._gpu_supported:
-            # GPU hardware found but llama-cpp-python may lack GPU support.
-            # Still offer the choice — llama.cpp silently falls back to CPU if
-            # GPU offload isn't available, so letting the user try is safe.
             from ..core.inference import gpu_install_hint
             hint = gpu_install_hint(self._gpu_type) or ""
             note.update(
@@ -132,7 +132,6 @@ class OverviewApp(App[int]):
             )
             status.update("[dim]Choose how to run inference:[/dim]")
         else:
-            # GPU hardware + GPU support confirmed
             note.display = False
             status.update("[dim]Choose how to run inference:[/dim]")
 
@@ -151,7 +150,6 @@ class OverviewApp(App[int]):
         elif key == "c":
             self.exit(0)
         elif key == "enter" and not self._has_gpu:
-            # No buttons visible — Enter confirms CPU-only run
             self.exit(0)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
