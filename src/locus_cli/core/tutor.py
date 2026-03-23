@@ -8,7 +8,6 @@ Workers run as threading.Thread instances (not Textual @work).
 from __future__ import annotations
 
 import threading
-import time
 from collections.abc import Callable
 from pathlib import Path
 
@@ -87,7 +86,7 @@ class TutorSession:
                 "Large-file tutoring is not supported in v0.1.0."
             )
 
-        lines = content.split("\n")
+        lines = content.splitlines()
 
         if len(lines) > _MAX_LINES:
             raise ValueError(

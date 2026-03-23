@@ -50,4 +50,4 @@ def test_tutor_session_accepts_valid_python_file(tmp_path: Path) -> None:
     src = tmp_path / "hello.py"
     src.write_text("def hello():\n    return 'hi'\n")
     session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
-    assert session.lines == ["def hello():", "    return 'hi'", ""]
+    assert session.lines == ["def hello():", "    return 'hi'"]
