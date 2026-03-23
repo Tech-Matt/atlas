@@ -37,7 +37,12 @@ locus tutor src/locus_cli/core/scanner.py
 
 ### Pre-TUI: Provisioning
 
-Before the TUI opens, `cmd_tutor` runs the same provisioning flow as `cmd_overview`: hardware detection, tier selection, and model download if not already cached. This happens in the terminal (not inside the TUI), identical to the `overview` flow — including the download advisory described above. The TUI only opens once a model is confirmed available.
+Before the TUI opens, `cmd_tutor` runs the following in the terminal (not inside the TUI):
+
+1. **Hardware profiling** — `HardwareProfiler` detects GPU type and VRAM.
+2. **Tier selection** — `Provisioner.determine_tier()` picks the model tier.
+3. **`n_gpu_layers` selection** — auto-selected based on `check_gpu_support()`: `-1` (full GPU offload) if GPU support is available, `0` (CPU-only) otherwise. There is no user-facing GPU/CPU selection prompt — unlike `overview`, `tutor` does not show `OverviewApp` before its own TUI opens, as two sequential TUIs would be jarring. `n_gpu_layers` is passed into `TutorSession.__init__`.
+4. **Model download** — if the model is not cached, show the download advisory and download it. The TUI only opens once a model is confirmed available.
 
 ### TUI Opens Instantly
 
