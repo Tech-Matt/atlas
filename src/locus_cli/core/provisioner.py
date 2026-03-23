@@ -22,6 +22,7 @@ class Provisioner:
     # The Binary Matrix (llama.cpp server releases)
     # URLS will need to be updated to the latest release tag
     # TODO: Port later to manifest.json
+    # Reserved — not yet used. Planned for llama.cpp binary distribution in a future release.
     BINARIES = {
         "Windows": {
             "CUDA": "https://github.com/ggml-org/llama.cpp/releases/download/b8133/llama-b8133-bin-win-cuda-13.1-x64.zip",

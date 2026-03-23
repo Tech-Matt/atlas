@@ -80,16 +80,3 @@ class HardwareProfiler:
 
 
         return gpu_info
-
-
-
-# [REMOVE LATER]
-if __name__ == "__main__":
-    profiler = HardwareProfiler()
-    ram = profiler.get_total_ram_gb()
-    gpu_info = profiler.detect_gpu()
-
-    system = gpu_info["type"]
-    vram = gpu_info["vram_gb"]
-    print(f"System RAM detected: {ram} GB")
-    print(f"System type: {system}, VRAM detected {vram} GB")
