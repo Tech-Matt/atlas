@@ -138,6 +138,55 @@ class TutorSession:
             f"{self._content}"
         )
 
+    # ------------------------------------------------------------------ #
+    # line_cache interface
+    # ------------------------------------------------------------------ #
+
+    def get_explanation(self, line_num: int) -> str | None:
+        """Return the cached explanation for line_num, or None on a miss."""
+        return self.line_cache.get(line_num)
+
+    def request_explanation(
+        self,
+        line_num: int,
+        _llm_fn: Callable[[str], str] | None = None,
+    ) -> str:
+        """
+        Return the explanation for line_num, generating it if not cached.
+
+        _llm_fn: injectable for tests. Production callers omit this and
+                 the real LLM is used via _call_llm().
+        """
+        if line_num in self.line_cache:
+            return self.line_cache[line_num]
+        llm = _llm_fn or self._call_llm
+        explanation = llm(self.build_line_prompt(line_num))
+        self.line_cache[line_num] = explanation
+        return explanation
+
+    def _get_llm(self):
+        """Return the shared Llama instance, loading it once on first call."""
+        if not hasattr(self, "_llm_instance") or self._llm_instance is None:
+            from llama_cpp import Llama  # type: ignore[import]
+            self._llm_instance = Llama(
+                model_path=str(self.model_path),
+                n_gpu_layers=self.n_gpu_layers,
+                n_ctx=8192,
+                verbose=False,
+                chat_format="chatml",
+            )
+        return self._llm_instance
+
+    def _call_llm(self, prompt: str) -> str:
+        """Call the local LLM with a single prompt and return the full response."""
+        llm = self._get_llm()
+        result = llm.create_chat_completion(
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=300,
+            temperature=0.3,
+        )
+        return result["choices"][0]["message"]["content"].strip()
+
     def build_line_prompt(self, line_num: int) -> str:
         # line_num is 1-indexed
         line_content = self.lines[line_num - 1] if 1 <= line_num <= len(self.lines) else ""

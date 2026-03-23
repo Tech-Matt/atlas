@@ -102,3 +102,52 @@ def test_build_line_prompt_marks_current_line(tmp_path: Path) -> None:
     session.file_summary = "summary"
     prompt = session.build_line_prompt(line_num=1)
     assert ">>>" in prompt
+
+
+# ---------------------------------------------------------------------------
+# TutorSession — line_cache interface
+# ---------------------------------------------------------------------------
+
+def test_get_explanation_returns_none_on_cache_miss(tmp_path: Path) -> None:
+    session = _make_session(tmp_path)
+    assert session.get_explanation(1) is None
+
+
+def test_get_explanation_returns_cached_value(tmp_path: Path) -> None:
+    session = _make_session(tmp_path)
+    session.line_cache[1] = "This defines foo."
+    assert session.get_explanation(1) == "This defines foo."
+
+
+def test_request_explanation_uses_injected_llm(tmp_path: Path) -> None:
+    session = _make_session(tmp_path)
+    session.file_summary = "summary"
+
+    def fake_llm(prompt: str) -> str:
+        return "Fake explanation."
+
+    result = session.request_explanation(1, _llm_fn=fake_llm)
+    assert result == "Fake explanation."
+
+
+def test_request_explanation_caches_result(tmp_path: Path) -> None:
+    session = _make_session(tmp_path)
+    session.file_summary = "summary"
+
+    session.request_explanation(1, _llm_fn=lambda p: "cached!")
+    assert session.get_explanation(1) == "cached!"
+
+
+def test_request_explanation_does_not_regenerate_cached(tmp_path: Path) -> None:
+    session = _make_session(tmp_path)
+    session.file_summary = "summary"
+    session.line_cache[1] = "already cached"
+
+    call_count = {"n": 0}
+    def counting_llm(prompt: str) -> str:
+        call_count["n"] += 1
+        return "new value"
+
+    result = session.request_explanation(1, _llm_fn=counting_llm)
+    assert result == "already cached"
+    assert call_count["n"] == 0
