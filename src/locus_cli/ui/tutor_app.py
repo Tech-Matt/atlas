@@ -79,7 +79,7 @@ class TutorApp(App[None]):
 
     def compose(self) -> ComposeResult:
         with Horizontal(id="split"):
-            yield Static(id="code-panel", markup=False)
+            yield Static(id="code-panel")
             yield Static(id="explanation-panel")
         yield Footer()
 
@@ -103,12 +103,14 @@ class TutorApp(App[None]):
 
     def _render_code(self) -> None:
         """Re-render the code panel with the current line highlighted."""
+        from rich.markup import escape
+
         assert self._session is not None
         lines = self._session.lines
         parts: list[str] = []
         for i, line in enumerate(lines, start=1):
             num = f"{i:>4}  "
-            text = line.rstrip("\n")
+            text = escape(line.rstrip("\n"))
             if i == self._cursor:
                 parts.append(f"[reverse]\u25b6 {num}{text}[/reverse]")
             else:
