@@ -306,3 +306,26 @@ def test_build_summary_prompt_large_file_uses_sampling(tmp_path: Path) -> None:
     assert "LINE_500" in prompt
     # Should NOT contain all 500 lines verbatim
     assert prompt.count("LINE_") < 500
+
+
+def test_build_summary_prompt_very_large_file_uses_three_sections(tmp_path: Path) -> None:
+    """Files > ~700 lines should produce head + middle + tail with two omission markers."""
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "very_large.py"
+    # 900-line file — forces mid_start > 300, activating the three-section path
+    src.write_text("\n".join(f"# LINE_{i}" for i in range(1, 901)))
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+
+    prompt = session.build_summary_prompt()
+
+    # Two omission markers (before mid and before tail)
+    assert prompt.count("[...") == 2
+    # Head present
+    assert "LINE_1" in prompt
+    assert "LINE_300" in prompt
+    # Middle present (centred around line 450); mid_start=400 → lines[400:500] → LINE_401-LINE_500
+    assert "LINE_401" in prompt
+    # Tail present
+    assert "LINE_900" in prompt
+    # Not all 900 lines
+    assert prompt.count("LINE_") < 900
