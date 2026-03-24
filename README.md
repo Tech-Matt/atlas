@@ -77,6 +77,28 @@ pip install -e .
 
 ---
 
+## GPU Acceleration
+
+The default installation uses a CPU-only build of `llama-cpp-python`. To enable GPU acceleration, reinstall it with the appropriate backend:
+
+**NVIDIA (CUDA 12.1):**
+```bash
+pip install llama-cpp-python \
+  --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/cu121
+```
+
+**AMD (ROCm 6.0):**
+```bash
+pip install llama-cpp-python \
+  --extra-index-url https://abetlen.github.io/llama-cpp-python/whl/rocm60
+```
+
+**Apple Silicon:** GPU acceleration via Metal is enabled automatically with the default install — no extra steps needed.
+
+> Locus will display a warning at runtime if GPU was selected but is not available, along with the exact install command for your platform.
+
+---
+
 ## Platform support
 
 | Platform | Status |
