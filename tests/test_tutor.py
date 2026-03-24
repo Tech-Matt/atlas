@@ -29,20 +29,12 @@ def test_tutor_session_raises_on_binary_file(tmp_path: Path) -> None:
         TutorSession(binary, n_gpu_layers=0)
 
 
-def test_tutor_session_raises_when_file_too_long(tmp_path: Path) -> None:
-    from locus_cli.core.tutor import TutorSession
-    big = tmp_path / "big.py"
-    big.write_text("\n".join(f"x = {i}" for i in range(501)))
-    with pytest.raises(ValueError, match="501 lines"):
-        TutorSession(big, n_gpu_layers=0)
-
-
 def test_tutor_session_raises_when_file_too_large(tmp_path: Path) -> None:
     from locus_cli.core.tutor import TutorSession
     big = tmp_path / "big.py"
-    # Write just over 20 KB
-    big.write_bytes(b"x = 1\n" * 3500)
-    with pytest.raises(ValueError, match="20 KB"):
+    # Write just over 500 KB
+    big.write_bytes(b"x" * (500 * 1024 + 1))
+    with pytest.raises(ValueError, match="500 KB"):
         TutorSession(big, n_gpu_layers=0)
 
 
@@ -273,9 +265,44 @@ def test_tutor_cli_rejects_binary_file(tmp_path: Path) -> None:
     assert result != 0
 
 
-def test_tutor_cli_rejects_oversized_file(tmp_path: Path) -> None:
-    from locus_cli.main import main
-    big = tmp_path / "big.py"
-    big.write_text("\n".join(f"x = {i}" for i in range(501)))
-    result = main(["tutor", str(big)])
-    assert result != 0
+def test_build_line_prompt_sliding_window(tmp_path: Path) -> None:
+    """Prompt should contain only a window of lines, not the full file."""
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "big.py"
+    # 200-line file: line N contains "LINE_N"
+    src.write_text("\n".join(f"# LINE_{i}" for i in range(1, 201)))
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+    session.file_summary = "summary"
+
+    prompt = session.build_line_prompt(line_num=100)
+
+    # Should contain the window header
+    assert "Lines 60" in prompt
+    assert "140 of 200" in prompt
+    # Should contain lines within the window
+    assert "LINE_60" in prompt
+    assert "LINE_140" in prompt
+    # Should NOT contain lines outside the window
+    assert "# LINE_1\n" not in prompt
+    assert "LINE_200" not in prompt
+
+
+def test_build_summary_prompt_large_file_uses_sampling(tmp_path: Path) -> None:
+    """Summary prompt for large files should use head+middle+tail sampling."""
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "large.py"
+    # 500-line file: each line is "# LINE_N"
+    src.write_text("\n".join(f"# LINE_{i}" for i in range(1, 501)))
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+
+    prompt = session.build_summary_prompt()
+
+    # Should contain the omission marker
+    assert "[..." in prompt
+    # Should contain head lines
+    assert "LINE_1" in prompt
+    assert "LINE_300" in prompt
+    # Should contain tail lines
+    assert "LINE_500" in prompt
+    # Should NOT contain all 500 lines verbatim
+    assert prompt.count("LINE_") < 500

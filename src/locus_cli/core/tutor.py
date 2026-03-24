@@ -13,8 +13,7 @@ from collections.abc import Callable
 from pathlib import Path
 
 # Maximum file size accepted by locus tutor
-_MAX_LINES = 500
-_MAX_BYTES = 20 * 1024  # 20 KB
+_MAX_BYTES = 500 * 1024  # 500 KB
 
 
 class TutorSession:
@@ -84,17 +83,10 @@ class TutorSession:
 
         if len(raw) > _MAX_BYTES:
             raise ValueError(
-                f"File too large: {len(raw) / 1024:.0f} KB (max 20 KB). "
-                "Large-file tutoring is not supported in v0.1.0."
+                f"File too large: {len(raw) / 1024:.0f} KB (max 500 KB)."
             )
 
         lines = content.splitlines()
-
-        if len(lines) > _MAX_LINES:
-            raise ValueError(
-                f"File too long: {len(lines)} lines (max {_MAX_LINES}). "
-                "Large-file tutoring is not supported in v0.1.0."
-            )
 
         return content, lines
 
@@ -142,6 +134,8 @@ class TutorSession:
     # ------------------------------------------------------------------ #
 
     _PREFETCH_AHEAD = 20  # pause when cached_line > cursor_line + this
+    _WINDOW = 40  # lines of context on each side of the cursor
+    _SUMMARY_SAMPLE_THRESHOLD = 400
 
     def _start_worker_b(self) -> None:
         """Start Worker B from the current cursor position."""
@@ -181,6 +175,33 @@ class TutorSession:
     # ------------------------------------------------------------------ #
 
     def build_summary_prompt(self) -> str:
+        total = len(self.lines)
+
+        if total <= self._SUMMARY_SAMPLE_THRESHOLD:
+            file_content = self._content
+        else:
+            head = self.lines[0:300]
+            mid = total // 2
+            mid_start = max(300, mid - 50)
+            mid_end = min(total - 100, mid_start + 100)
+
+            sections: list[str] = ["\n".join(head)]
+
+            mid_included = False
+            if mid_start < mid_end:
+                omitted_before = mid_start - 300
+                if omitted_before > 0:
+                    sections.append(f"[... {omitted_before} lines omitted ...]")
+                    sections.append("\n".join(self.lines[mid_start:mid_end]))
+                    mid_included = True
+
+            tail_start_line = mid_end if mid_included else 300
+            omitted_before_tail = total - 100 - tail_start_line
+            sections.append(f"[... {omitted_before_tail} lines omitted ...]")
+            sections.append("\n".join(self.lines[-100:]))
+
+            file_content = "\n".join(sections)
+
         return (
             "You are a code tutor. Read the following file and write a structured summary "
             "for a developer who is about to read it line by line.\n\n"
@@ -191,7 +212,7 @@ class TutorSession:
             "Be concise but thorough. Target 150-250 words.\n\n"
             f"FILE: {self.file_path.name}\n"
             "---\n"
-            f"{self._content}"
+            f"{file_content}"
         )
 
     # ------------------------------------------------------------------ #
@@ -262,14 +283,19 @@ class TutorSession:
             return result["choices"][0]["message"]["content"].strip()
 
     def build_line_prompt(self, line_num: int) -> str:
-        # line_num is 1-indexed
-        line_content = self.lines[line_num - 1] if 1 <= line_num <= len(self.lines) else ""
+        total = len(self.lines)
+        start = max(1, line_num - self._WINDOW)
+        end = min(total, line_num + self._WINDOW)
+        window_lines = "\n".join(self.lines[start - 1 : end])
+        line_content = self.lines[line_num - 1] if 1 <= line_num <= total else ""
+        summary = self.file_summary or "(summary not yet available)"
+
         return (
             "You are a code tutor helping a developer understand a file line by line.\n\n"
-            f"FILE SUMMARY:\n{self.file_summary}\n\n"
-            f"FULL FILE ({self.file_path.name}):\n"
+            f"FILE SUMMARY:\n{summary}\n\n"
+            f"EXCERPT (Lines {start}–{end} of {total}):\n"
             "---\n"
-            f"{self._content}\n"
+            f"{window_lines}\n"
             "---\n\n"
             f"The developer is currently on line {line_num}:\n"
             f">>> {line_content}\n\n"
