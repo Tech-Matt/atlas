@@ -75,8 +75,23 @@ class HardwareProfiler:
 
             except FileNotFoundError:
                 # If the AMD GPU is not found we are simply ignoring the error
-                # and return the default CPU_ONLY Fallback 
-                pass 
+                # and return the default CPU_ONLY Fallback
+                pass
 
+        # 4. AMD VRAM via rocm-smi (Linux only, best-effort)
+        if gpu_info["type"] == "AMD":
+            try:
+                result = subprocess.run(
+                    ["rocm-smi", "--showmeminfo", "vram", "--noheader"],
+                    capture_output=True, text=True
+                )
+                if result.returncode == 0:
+                    for line in result.stdout.splitlines():
+                        if "VRAM Total Memory (B):" in line:
+                            vram_bytes = int(line.split(":")[-1].strip())
+                            gpu_info["vram_gb"] = round(vram_bytes / 1024**3, 2)
+                            break
+            except Exception:
+                pass  # rocm-smi not available or parse failed — keep 0.0
 
         return gpu_info
