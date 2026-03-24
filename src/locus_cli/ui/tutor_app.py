@@ -235,26 +235,29 @@ class TutorApp(App[None]):
     def _fetch_explanation(self, line_num: int) -> None:
         assert self._session is not None
         first_token = True
-        accumulated: list[str] = []  # str accumulator — avoids reading panel.renderable
+        accumulated: list[str] = []
 
         def _on_token(token: str) -> None:
             nonlocal first_token
+            should_stop = first_token
+            first_token = False  # flip on worker thread, before dispatching
             accumulated.append(token)
             current_text = "".join(accumulated)
 
             def _update() -> None:
-                nonlocal first_token
-                if first_token:
+                if should_stop:
                     self._stop_loading_animation()
-                    first_token = False
                 self._set_explanation(current_text)
 
             self.call_from_thread(_update)
 
         def _on_done(full_text: str) -> None:
-            # line_cache already written by stream_explanation in this thread.
-            # Final render with authoritative full_text corrects any partial-update artefacts.
-            self.call_from_thread(self._set_explanation, full_text)
+            # Stop animation in case stream_explanation returned from cache
+            # (on_token never fired, so animation is still running)
+            def _finish() -> None:
+                self._stop_loading_animation()
+                self._set_explanation(full_text)
+            self.call_from_thread(_finish)
 
         self._session.stream_explanation(line_num, _on_token, _on_done)
 
