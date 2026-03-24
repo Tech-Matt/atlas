@@ -192,14 +192,24 @@ class TutorApp(App[None]):
             self._cursor += 1
             self._session.set_cursor(self._cursor)
             self._render_code()
-            self._set_explanation("Press [bold]Enter[/bold] or [bold]Space[/bold] to explain this line.")
+            cached = self._session.get_explanation(self._cursor)
+            if cached is not None:
+                self._stop_loading_animation()
+                self._set_explanation(cached)
+            else:
+                self._set_explanation("Press [bold]Enter[/bold] or [bold]Space[/bold] to explain this line.")
 
     def action_move_up(self) -> None:
         if self._session and self._cursor > 1:
             self._cursor -= 1
             self._session.set_cursor(self._cursor)
             self._render_code()
-            self._set_explanation("Press [bold]Enter[/bold] or [bold]Space[/bold] to explain this line.")
+            cached = self._session.get_explanation(self._cursor)
+            if cached is not None:
+                self._stop_loading_animation()
+                self._set_explanation(cached)
+            else:
+                self._set_explanation("Press [bold]Enter[/bold] or [bold]Space[/bold] to explain this line.")
 
     def action_reveal(self) -> None:
         if self._session is None:
@@ -224,13 +234,29 @@ class TutorApp(App[None]):
     @work(thread=True)
     def _fetch_explanation(self, line_num: int) -> None:
         assert self._session is not None
-        explanation = self._session.request_explanation(line_num)
-        
-        def _on_done():
-            self._stop_loading_animation()
-            self._set_explanation(explanation)
-            
-        self.call_from_thread(_on_done)
+        first_token = True
+        accumulated: list[str] = []  # str accumulator — avoids reading panel.renderable
+
+        def _on_token(token: str) -> None:
+            nonlocal first_token
+            accumulated.append(token)
+            current_text = "".join(accumulated)
+
+            def _update() -> None:
+                nonlocal first_token
+                if first_token:
+                    self._stop_loading_animation()
+                    first_token = False
+                self._set_explanation(current_text)
+
+            self.call_from_thread(_update)
+
+        def _on_done(full_text: str) -> None:
+            # line_cache already written by stream_explanation in this thread.
+            # Final render with authoritative full_text corrects any partial-update artefacts.
+            self.call_from_thread(self._set_explanation, full_text)
+
+        self._session.stream_explanation(line_num, _on_token, _on_done)
 
     # ------------------------------------------------------------------ #
     # Messages
