@@ -133,8 +133,8 @@ def cmd_tutor(args: argparse.Namespace) -> int:
     # GPU/CPU selection screen
     from .ui.setup_app import SetupApp
     from .core.inference import warn_if_gpu_unsupported
-    app = SetupApp(title="Tutor", tier=tier, provisioner=provisioner, gpu_info=gpu_info)
-    n_gpu_layers: int = app.run() or 0
+    setup_app = SetupApp(title="Tutor", tier=tier, provisioner=provisioner, gpu_info=gpu_info)
+    n_gpu_layers: int = setup_app.run() or 0
     warn_if_gpu_unsupported(str(gpu_info.get("type", "CPU_ONLY")), n_gpu_layers)
 
     # Model download advisory + download if needed
