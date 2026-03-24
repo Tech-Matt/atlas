@@ -34,8 +34,8 @@ def cmd_overview(args: argparse.Namespace) -> int:
     from .core.extractor import extract_context
     from .core.profiler import HardwareProfiler
     from .core.provisioner import Provisioner
-    from .core.inference import stream_overview
-    from .ui.overview_app import OverviewApp
+    from .core.inference import stream_overview, warn_if_gpu_unsupported
+    from .ui.setup_app import SetupApp
     from rich.progress import Progress, BarColumn, DownloadColumn, TransferSpeedColumn
 
     path = Path(args.path)
@@ -57,8 +57,9 @@ def cmd_overview(args: argparse.Namespace) -> int:
     )
 
     # Setup screen: user picks GPU or CPU, app returns n_gpu_layers
-    app = OverviewApp(tier=tier, provisioner=provisioner, gpu_info=gpu_info)
+    app = SetupApp(title="Overview", tier=tier, provisioner=provisioner, gpu_info=gpu_info)
     n_gpu_layers: int = app.run() or 0
+    warn_if_gpu_unsupported(str(gpu_info.get("type", "CPU_ONLY")), n_gpu_layers)
 
     # Download model if not cached (Rich progress bar, no TUI)
     if not provisioner.is_model_cached(tier):
@@ -106,7 +107,6 @@ def cmd_tutor(args: argparse.Namespace) -> int:
     from .core.tutor import TutorSession
     from .core.profiler import HardwareProfiler
     from .core.provisioner import Provisioner
-    from .core.inference import check_gpu_support
     from rich.progress import Progress, BarColumn, DownloadColumn, TransferSpeedColumn
 
     file_path = Path(args.file).expanduser().resolve()
@@ -130,9 +130,12 @@ def cmd_tutor(args: argparse.Namespace) -> int:
             vram_gb=float(gpu_info.get("vram_gb", 0.0)),
         )
 
-    # Auto-select n_gpu_layers (no user prompt)
-    with console.status("[dim]Initializing AI backend...[/dim]", spinner="dots"):
-        n_gpu_layers = -1 if check_gpu_support() else 0
+    # GPU/CPU selection screen
+    from .ui.setup_app import SetupApp
+    from .core.inference import warn_if_gpu_unsupported
+    app = SetupApp(title="Tutor", tier=tier, provisioner=provisioner, gpu_info=gpu_info)
+    n_gpu_layers: int = app.run() or 0
+    warn_if_gpu_unsupported(str(gpu_info.get("type", "CPU_ONLY")), n_gpu_layers)
 
     # Model download advisory + download if needed
     _MODEL_SIZES = {1: "4.7 GB", 2: "2.0 GB", 3: "1.0 GB", 4: "0.4 GB"}
