@@ -298,6 +298,10 @@ class TutorSession:
 
         _stream_fn: injectable for tests. Signature: (prompt, on_token_fn) -> full_text.
         """
+        if line_num in self.line_cache:
+            on_done(self.line_cache[line_num])
+            return
+
         prompt = self.build_line_prompt(line_num)
 
         if _stream_fn is not None:

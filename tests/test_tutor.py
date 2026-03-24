@@ -360,7 +360,7 @@ def test_stream_explanation_fires_tokens_and_done(tmp_path: Path) -> None:
 
 
 def test_stream_explanation_caches_result(tmp_path: Path) -> None:
-    """stream_explanation stores result in line_cache via on_done."""
+    """stream_explanation stores result in line_cache before calling on_done."""
     from locus_cli.core.tutor import TutorSession
     src = tmp_path / "s.py"
     src.write_text("x = 1\n")
