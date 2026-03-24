@@ -329,3 +329,49 @@ def test_build_summary_prompt_very_large_file_uses_three_sections(tmp_path: Path
     assert "LINE_900" in prompt
     # Not all 900 lines
     assert prompt.count("LINE_") < 900
+
+
+def test_stream_explanation_fires_tokens_and_done(tmp_path: Path) -> None:
+    """stream_explanation calls on_token for each token and on_done with full text."""
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "s.py"
+    src.write_text("x = 1\n")
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+    session.file_summary = "summary"
+
+    tokens_received: list[str] = []
+    done_text: list[str] = []
+
+    def fake_stream(prompt: str, on_token_fn: object) -> str:
+        for tok in ["Hello", " ", "world"]:
+            on_token_fn(tok)  # type: ignore[operator]
+        return "Hello world"
+
+    session.stream_explanation(
+        line_num=1,
+        on_token=tokens_received.append,
+        on_done=done_text.append,
+        _stream_fn=fake_stream,
+    )
+
+    assert tokens_received == ["Hello", " ", "world"]
+    assert done_text == ["Hello world"]
+    assert session.get_explanation(1) == "Hello world"
+
+
+def test_stream_explanation_caches_result(tmp_path: Path) -> None:
+    """stream_explanation stores result in line_cache via on_done."""
+    from locus_cli.core.tutor import TutorSession
+    src = tmp_path / "s.py"
+    src.write_text("x = 1\n")
+    session = TutorSession(src, n_gpu_layers=0, _skip_workers=True)
+    session.file_summary = "summary"
+
+    session.stream_explanation(
+        line_num=1,
+        on_token=lambda t: None,
+        on_done=lambda full: None,
+        _stream_fn=lambda p, cb: (cb("ok"), "ok")[1],
+    )
+
+    assert session.get_explanation(1) == "ok"

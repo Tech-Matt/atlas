@@ -52,6 +52,7 @@ class TutorSession:
         self._cursor_line: int = 1
         self._summary_ready = threading.Event()
         self._llm_lock = threading.Lock()
+        self._cache_lock = threading.Lock()
 
         if not _skip_workers:
             self._start_worker_a()
@@ -168,7 +169,8 @@ class TutorSession:
                 time.sleep(0.1)
             if line_num not in self.line_cache:
                 explanation = llm_fn(self.build_line_prompt(line_num))
-                self.line_cache[line_num] = explanation
+                with self._cache_lock:
+                    self.line_cache[line_num] = explanation
 
     # ------------------------------------------------------------------ #
     # Prompt builders
@@ -238,7 +240,8 @@ class TutorSession:
             return self.line_cache[line_num]
         llm = _llm_fn or self._call_llm
         explanation = llm(self.build_line_prompt(line_num))
-        self.line_cache[line_num] = explanation
+        with self._cache_lock:
+            self.line_cache[line_num] = explanation
         return explanation
 
     def _get_llm(self):
@@ -281,6 +284,44 @@ class TutorSession:
                 temperature=0.3,
             )
             return result["choices"][0]["message"]["content"].strip()
+
+    def stream_explanation(
+        self,
+        line_num: int,
+        on_token: Callable[[str], None],
+        on_done: Callable[[str], None],
+        _stream_fn: Callable[[str, Callable[[str], None]], str] | None = None,
+    ) -> None:
+        """
+        Stream an explanation for line_num, calling on_token for each token
+        and on_done(full_text) when complete. Caches the result in line_cache.
+
+        _stream_fn: injectable for tests. Signature: (prompt, on_token_fn) -> full_text.
+        """
+        prompt = self.build_line_prompt(line_num)
+
+        if _stream_fn is not None:
+            full_text = _stream_fn(prompt, on_token)
+        else:
+            full_text_parts: list[str] = []
+            with self._llm_lock:
+                llm = self._get_llm()
+                for chunk in llm.create_chat_completion(
+                    messages=[{"role": "user", "content": prompt}],
+                    max_tokens=300,
+                    temperature=0.3,
+                    stream=True,
+                ):
+                    token: str = chunk["choices"][0]["delta"].get("content", "")
+                    if token:
+                        full_text_parts.append(token)
+                        on_token(token)
+            full_text = "".join(full_text_parts)
+
+        with self._cache_lock:
+            self.line_cache[line_num] = full_text
+
+        on_done(full_text)
 
     def build_line_prompt(self, line_num: int) -> str:
         total = len(self.lines)
