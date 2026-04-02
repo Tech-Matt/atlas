@@ -2,15 +2,16 @@
 myEnv/
 venv/
 env/
+.venv/
+.vscode/
 
-# Python Bytecode
+# Python
 __pycache__/
 *.py[cod]
+.mypy_cache/
+.pytest_cache/
+uv.lock
 
 # Extra
 dist/
 *.egg-info/
-# Agents
-.github/copilot-instructions.md
-# Superpowers Claude Plugin
-.superpowers/
